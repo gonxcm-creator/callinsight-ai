@@ -1,1 +1,59 @@
-PLACEHOLDER
+/* Design tokens: warm paper UI, single green accent, mobile-first. */
+/* Source Sans 3; tap targets ≥48px; no purple glow. */
+:root {
+  --bg: #f7f6f3;
+  --card: #fff;
+  --ink: #1c1c1c;
+  --muted: #5f5f5f;
+  --line: #dcd8d0;
+  --acento: #0b6e4f;
+  --warn: #9a3412;
+  --tap: 48px;
+  --radius: 10px;
+  --pad: 16px;
+  --font: 'Source Sans 3', system-ui, -apple-system, sans-serif;
+  --shadow: 0 1px 2px rgba(28, 28, 28, 0.06);
+  --num: clamp(1.75rem, 7vw, 2.75rem);
+  --focus-ring: 2px solid var(--acento);
+  --disabled-bg: #ebe8e2;
+  --disabled-ink: #9a9690;
+  --gap-block: 20px;
+  --gap-field: 12px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--acento);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button,
+textarea,
+input {
+  font: inherit;
+  color: inherit;
+}
