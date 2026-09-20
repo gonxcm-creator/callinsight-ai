@@ -421,3 +421,9 @@ ul.clean li {
   color: var(--acento);
   flex-shrink: 0;
 }
+
+.btn.is-copied {
+  background: #0b6e4f;
+  border-color: #0b6e4f;
+  filter: brightness(1.08);
+}
