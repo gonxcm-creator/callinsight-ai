@@ -182,7 +182,7 @@ function buildAutopsia(text: string, sentimiento: Sentimiento): { errores: strin
 
   if (/tel[eé]fono|correo|email/.test(t)) mejor.push('Se capturaron datos de contacto')
   if (/visita|jueves|mañana/.test(t)) mejor.push('Se avanzó hacia una visita concreta')
-  if (/presupuesto|hasta unos|entre \d/.test(t)) mejor.push('Hay interés suficiente para un seguimiento estructurado')
+  if (/presupuesto|hasta unos|entre \d/.test(t)) mejor.push('Se calificó el presupuesto')
   if (mejor.length === 0) mejor.push('Hay interés suficiente para un seguimiento estructurado')
   return { errores, mejor }
 }
