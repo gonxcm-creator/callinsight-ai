@@ -32,6 +32,9 @@ let activeTab = 'buy';
 let zoneSort = 'price';
 let localReports = loadReports();
 let cloudReports = [];
+let funnel = null;
+let funnelError = false;
+const FUNNEL_EVENTS = ['calc_view', 'zone_applied', 'cta_view', 'cta_submit', 'lead_sent'];
 let toastTimer = null;
 
 function t(key, vars) {
@@ -1325,7 +1328,13 @@ async function loadSession() {
     session = null;
   }
   renderAccount();
-  if (session) loadCloud();
+  if (session) {
+    loadCloud();
+    loadFunnel();
+  } else {
+    funnel = null;
+    renderFunnel();
+  }
 }
 
 async function loadCloud() {
@@ -1353,6 +1362,32 @@ async function loadCloud() {
     cloudReports = [];
   }
   renderReports();
+}
+
+async function loadFunnel() {
+  if (!session) {
+    funnel = null;
+    renderFunnel();
+    return;
+  }
+  try {
+    const res = await fetch('/api/events', {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    });
+    if (res.status === 401) {
+      funnel = null;
+      renderFunnel();
+      return;
+    }
+    if (!res.ok) throw new Error('funnel');
+    funnel = await res.json();
+    funnelError = false;
+  } catch (error) {
+    funnel = null;
+    funnelError = true;
+  }
+  renderFunnel();
 }
 
 function renderAccount() {
@@ -1388,6 +1423,7 @@ function renderAccount() {
       <p class="hint" style="margin-top:.7rem">${esc(t('account.local'))}</p>`;
   }
   renderReports();
+  renderFunnel();
 }
 
 function renderReports() {
@@ -1417,6 +1453,79 @@ function renderReports() {
     groups.push(cloudReports.map((report) => reportItem(report, 'cloud')).join(''));
   }
   list.innerHTML = groups.join('');
+}
+
+function renderFunnel() {
+  const box = $('#funnel-panel');
+  if (!box) return;
+  if (!session) {
+    box.hidden = true;
+    box.innerHTML = '';
+    return;
+  }
+  box.hidden = false;
+  const head = `<div class="card-head funnel-head"><div><h3>${esc(
+    t('account.funnelTitle'),
+  )}</h3><p class="hint">${esc(t('account.funnelSub'))}</p></div><span class="tag">${esc(
+    t('account.funnelWindow'),
+  )}</span></div>`;
+  if (funnelError) {
+    box.innerHTML = `${head}<div class="empty">${esc(t('account.funnelError'))}</div>`;
+    return;
+  }
+  if (!funnel) {
+    box.innerHTML = `${head}<div class="empty">…</div>`;
+    return;
+  }
+  const totals = funnel.totals || {};
+  const days = Array.isArray(funnel.days) ? funnel.days : [];
+  const tiles = FUNNEL_EVENTS.map(
+    (key) =>
+      `<div class="funnel-tile"><span>${esc(t(`account.funnel.${key}`))}</span><b>${number(
+        Number(totals[key]) || 0,
+        locale,
+      )}</b></div>`,
+  ).join('');
+  const leadsTile = `<div class="funnel-tile is-lead"><span>${esc(
+    t('account.funnelLeads'),
+  )}</span><b>${number(Number(funnel.leads) || 0, locale)}</b></div>`;
+  const headRow = `<tr><th scope="col">${esc(t('account.funnelDay'))}</th>${FUNNEL_EVENTS.map(
+    (key) => `<th scope="col">${esc(t(`account.funnel.${key}`))}</th>`,
+  ).join('')}</tr>`;
+  const body = days.length
+    ? days
+        .map((entry) => {
+          const events = entry.events || {};
+          return `<tr><th scope="row">${esc(funnelDay(entry.day))}</th>${FUNNEL_EVENTS.map(
+            (key) => `<td>${number(Number(events[key]) || 0, locale)}</td>`,
+          ).join('')}</tr>`;
+        })
+        .join('')
+    : `<tr><td colspan="${FUNNEL_EVENTS.length + 1}" class="funnel-empty">${esc(
+        t('account.funnelEmpty'),
+      )}</td></tr>`;
+  box.innerHTML = `${head}
+    <div class="funnel-tiles">${tiles}${leadsTile}</div>
+    <div class="funnel-table-wrap">
+      <table class="funnel-table" aria-label="${esc(t('account.funnelTitle'))}">
+        <thead>${headRow}</thead>
+        <tbody>${body}</tbody>
+        <tfoot><tr><th scope="row">${esc(t('account.funnelTotal'))}</th>${FUNNEL_EVENTS.map(
+          (key) => `<td>${number(Number(totals[key]) || 0, locale)}</td>`,
+        ).join('')}</tr></tfoot>
+      </table>
+    </div>`;
+}
+
+function funnelDay(day) {
+  const date = new Date(`${day}T00:00:00Z`);
+  if (!day || Number.isNaN(date.getTime())) return String(day || '');
+  return date.toLocaleDateString(locale, {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 }
 
 function reportItem(report, scope) {

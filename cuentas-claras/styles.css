@@ -1388,6 +1388,89 @@ button {
   grid-template-columns: 0.85fr 1.15fr;
   gap: 0.8rem;
 }
+.funnel-card {
+  grid-column: 1 / -1;
+}
+.funnel-head {
+  align-items: flex-start;
+}
+.funnel-head .hint {
+  margin-top: 0.15rem;
+}
+.funnel-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 0.45rem;
+  margin-bottom: 0.9rem;
+}
+.funnel-tile {
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  padding: 0.5rem 0.6rem;
+  background: var(--surface);
+}
+.funnel-tile span {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.funnel-tile b {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+.funnel-tile.is-lead {
+  background: var(--accent-soft);
+  border-color: transparent;
+}
+.funnel-tile.is-lead b {
+  color: var(--accent);
+}
+.funnel-table-wrap {
+  overflow-x: auto;
+}
+.funnel-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+.funnel-table th,
+.funnel-table td {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: right;
+}
+.funnel-table thead th,
+.funnel-table tbody th,
+.funnel-table tfoot th {
+  text-align: left;
+}
+.funnel-table thead th {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+}
+.funnel-table tbody th {
+  color: var(--muted);
+  font-weight: 500;
+}
+.funnel-table tfoot tr {
+  border-top: 2px solid var(--line);
+  font-weight: 600;
+}
+.funnel-table .funnel-empty {
+  text-align: left;
+  color: var(--muted);
+  white-space: normal;
+}
 .auth-card {
   min-height: 190px;
 }

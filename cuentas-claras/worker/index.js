@@ -5,6 +5,12 @@ import { DEFAULT_STATE, REGION_BY_ID } from '../js/data.js';
 const MAX_BODY = 12000;
 const MAX_REPORTS = 20;
 const UUID = /^[a-zA-Z0-9-]{8,64}$/;
+const RATE_LIMITS = {
+  // Un lead real se envía una vez; cinco intentos por cuarto de hora dejan margen a errores.
+  leads: { limit: 5, windowMs: 15 * 60 * 1000 },
+  // Una visita normal genera pocos eventos; el tope corta ráfagas automatizadas.
+  events: { limit: 90, windowMs: 10 * 60 * 1000 },
+};
 
 let auth;
 let app;
@@ -46,44 +52,64 @@ function json(data, status = 200) {
 
 async function ensureSchema(env) {
   if (!env.DB) return false;
-  schemaPromise ??= env.DB.batch([
-    env.DB.prepare(
-      `CREATE TABLE IF NOT EXISTS reports (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        payload TEXT NOT NULL,
-        created_at TEXT NOT NULL
-      )`,
-    ),
-    env.DB.prepare(
-      'CREATE INDEX IF NOT EXISTS idx_reports_user ON reports (user_id, created_at DESC)',
-    ),
-    env.DB.prepare(
-      `CREATE TABLE IF NOT EXISTS leads (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        phone TEXT NOT NULL,
-        email TEXT NOT NULL,
-        consent_at TEXT NOT NULL,
-        consent_text TEXT NOT NULL,
-        source TEXT NOT NULL,
-        payload TEXT NOT NULL,
-        created_at TEXT NOT NULL
-      )`,
-    ),
-    env.DB.prepare(
-      'CREATE INDEX IF NOT EXISTS idx_leads_created ON leads (created_at DESC)',
-    ),
-    env.DB.prepare(
-      `CREATE TABLE IF NOT EXISTS events (
-        name TEXT NOT NULL,
-        day TEXT NOT NULL,
-        count INTEGER NOT NULL DEFAULT 0,
-        PRIMARY KEY (name, day)
-      )`,
-    ),
-  ]);
+  schemaPromise ??= (async () => {
+    await env.DB.batch([
+      env.DB.prepare(
+        `CREATE TABLE IF NOT EXISTS reports (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          payload TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        )`,
+      ),
+      env.DB.prepare(
+        'CREATE INDEX IF NOT EXISTS idx_reports_user ON reports (user_id, created_at DESC)',
+      ),
+      env.DB.prepare(
+        `CREATE TABLE IF NOT EXISTS leads (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          phone TEXT NOT NULL,
+          email TEXT NOT NULL,
+          consent_at TEXT NOT NULL,
+          consent_text TEXT NOT NULL,
+          source TEXT NOT NULL,
+          payload TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        )`,
+      ),
+      env.DB.prepare(
+        'CREATE INDEX IF NOT EXISTS idx_leads_created ON leads (created_at DESC)',
+      ),
+      env.DB.prepare(
+        `CREATE TABLE IF NOT EXISTS events (
+          name TEXT NOT NULL,
+          day TEXT NOT NULL,
+          count INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY (name, day)
+        )`,
+      ),
+      env.DB.prepare(
+        `CREATE TABLE IF NOT EXISTS rate_limits (
+          key TEXT PRIMARY KEY,
+          window_start INTEGER NOT NULL,
+          hits INTEGER NOT NULL DEFAULT 0
+        )`,
+      ),
+      env.DB.prepare(
+        'CREATE INDEX IF NOT EXISTS idx_rate_window ON rate_limits (window_start)',
+      ),
+    ]);
+    // Las ventanas duran minutos: 48 h después la fila ya no sirve para nada.
+    try {
+      await env.DB.prepare('DELETE FROM rate_limits WHERE window_start < ?')
+        .bind(Math.floor(Date.now() / 1000) - 172800)
+        .run();
+    } catch (error) {
+      /* la limpieza no debe impedir arrancar el esquema */
+    }
+  })();
   try {
     await schemaPromise;
     return true;
@@ -170,6 +196,43 @@ async function readBody(request) {
   }
 }
 
+function tooMany(seconds) {
+  return Response.json(
+    { error: 'Too many requests' },
+    {
+      status: 429,
+      headers: {
+        'Cache-Control': 'private, no-store',
+        'Retry-After': String(Math.max(1, Math.ceil(seconds))),
+      },
+    },
+  );
+}
+
+/** Huella no reversible de la IP: el contador no guarda la dirección. */
+async function clientKey(request) {
+  const ip = (request.headers.get('CF-Connecting-IP') || '').trim().slice(0, 64) || 'unknown';
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`cc-limit:${ip}`));
+  return Array.from(new Uint8Array(digest).slice(0, 12))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/** Devuelve los segundos de espera si la IP supera el tope, o 0 si puede pasar. */
+async function rateLimitRetry(env, request, scope, rule) {
+  const now = Date.now();
+  const start = Math.floor(now / rule.windowMs) * rule.windowMs;
+  const key = `${scope}:${await clientKey(request)}:${start}`;
+  await env.DB.prepare(
+    'INSERT INTO rate_limits (key, window_start, hits) VALUES (?, ?, 1) ON CONFLICT(key) DO UPDATE SET hits = hits + 1',
+  )
+    .bind(key, Math.floor(start / 1000))
+    .run();
+  const row = await env.DB.prepare('SELECT hits FROM rate_limits WHERE key = ?').bind(key).first();
+  if (Number(row?.hits || 0) <= rule.limit) return 0;
+  return (start + rule.windowMs - now) / 1000;
+}
+
 async function api(request, env, instance, url) {
   if (url.pathname === '/api/health' && request.method === 'GET') {
     const ready = await ensureSchema(env);
@@ -226,6 +289,9 @@ async function api(request, env, instance, url) {
 
   if (url.pathname === '/api/leads' && request.method === 'POST') {
     if (!isSameOriginRequest(request, env.APP_ORIGIN)) return json({ error: 'Forbidden' }, 403);
+    if (!(await ensureSchema(env))) return json({ error: 'Storage unavailable' }, 503);
+    const retry = await rateLimitRetry(env, request, 'leads', RATE_LIMITS.leads);
+    if (retry) return tooMany(retry);
     const body = await readBody(request);
     if (body.tooLarge) return json({ error: 'Payload too large' }, 413);
     if (body.invalid) return json({ error: 'Invalid JSON' }, 400);
@@ -240,7 +306,6 @@ async function api(request, env, instance, url) {
     if (digits.length < 9 || digits.length > 15) return json({ error: 'Invalid phone' }, 400);
     if (!EMAIL.test(email)) return json({ error: 'Invalid email' }, 400);
     if (data.consent !== true) return json({ error: 'Consent required' }, 400);
-    if (!(await ensureSchema(env))) return json({ error: 'Storage unavailable' }, 503);
     const id = crypto.randomUUID();
     const at = new Date().toISOString();
     const consentText = cleanText(data.consentText, 400) || 'lead-form-v1';
@@ -264,11 +329,14 @@ async function api(request, env, instance, url) {
 
   if (url.pathname === '/api/events' && request.method === 'POST') {
     if (!isSameOriginRequest(request, env.APP_ORIGIN)) return json({ error: 'Forbidden' }, 403);
+    // La analítica es best-effort: si no hay base de datos, se descarta en silencio.
+    if (!(await ensureSchema(env))) return new Response(null, { status: 204 });
+    const retry = await rateLimitRetry(env, request, 'events', RATE_LIMITS.events);
+    if (retry) return tooMany(retry);
     const body = await readBody(request);
     if (body.tooLarge || body.invalid) return new Response(null, { status: 204 });
     const name = cleanText(body.data?.name, 40);
     if (!EVENTS.includes(name)) return new Response(null, { status: 204 });
-    if (!(await ensureSchema(env))) return json({ error: 'Storage unavailable' }, 503);
     const day = new Date().toISOString().slice(0, 10);
     await env.DB.prepare(
       'INSERT INTO events (name, day, count) VALUES (?, ?, 1) ON CONFLICT(name, day) DO UPDATE SET count = count + 1',
@@ -282,9 +350,31 @@ async function api(request, env, instance, url) {
     const user = await instance.getUser(request);
     if (!user) return json({ error: 'Sign in required' }, 401);
     if (!(await ensureSchema(env))) return json({ error: 'Storage unavailable' }, 503);
-    const rows = await env.DB.prepare('SELECT name, day, count FROM events ORDER BY day DESC LIMIT 400').all();
+    const since = new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
+    const rows = await env.DB.prepare(
+      'SELECT name, day, count FROM events WHERE day >= ? ORDER BY day DESC',
+    )
+      .bind(since)
+      .all();
+    const totals = Object.fromEntries(EVENTS.map((name) => [name, 0]));
+    const byDay = new Map();
+    for (const row of rows.results || []) {
+      if (!EVENTS.includes(row.name)) continue;
+      let entry = byDay.get(row.day);
+      if (!entry) {
+        entry = { day: row.day, events: {} };
+        byDay.set(row.day, entry);
+      }
+      const count = Number(row.count) || 0;
+      entry.events[row.name] = count;
+      totals[row.name] += count;
+    }
     const leads = await env.DB.prepare('SELECT COUNT(*) AS n FROM leads').first();
-    return json({ events: rows.results || [], leads: Number(leads?.n || 0) });
+    return json({
+      days: [...byDay.values()],
+      totals,
+      leads: Number(leads?.n || 0),
+    });
   }
 
   const match = url.pathname.match(/^\/api\/reports\/([^/]+)$/);

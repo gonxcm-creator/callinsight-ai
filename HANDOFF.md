@@ -412,6 +412,26 @@ Se añade lo que faltaba para que un presupuesto sirva de algo: **a dónde ir co
   `/api/leads` sin Origin 403, `GET /api/events` 401, `/privacidad` 200 y sin desbordamiento a
   390 px. Se creó un lead de prueba («Prueba QA», qa@example.com) en la D1 de preview.
 
+## Panel de embudo y límites antiabuso (22/11/2026)
+
+- **Panel en Mi cuenta** (`#funnel-panel`): solo con sesión. Muestra seis cifras (calculadora, zona
+  aplicada, CTA visto, formulario enviado, lead enviado y leads reales recibidos) y una tabla de
+  eventos por día de los últimos 30 días con fila de totales. Sin sesión la tarjeta queda `hidden` y
+  vacía. `GET /api/events` devuelve ahora `{ days, totals, leads }` (antes una lista plana).
+- **Límites por IP y ventana** en D1 (`rate_limits`, clave = hash SHA-256 de `CF-Connecting-IP`):
+  5 envíos de lead por 15 minutos y 90 eventos por 10 minutos; al superarlos responde 429 con
+  `Retry-After`. La tabla se limpia automáticamente a las 48 h y el hash no se usa para medir ni
+  permite identificar a la persona. La política de privacidad lo explica.
+- **Verificado en la preview publicada**: 2 eventos válidos 204; ráfaga de 95 → 90×204 y 5×429;
+  5 leads sin consentimiento → 400 y los siguientes → 429 (ambos 429 con `Retry-After`); origen
+  ajeno 403; `GET /api/events` 401 sin sesión; `/` y `/api/health` 200.
+- **Panel comprobado en navegador con sesión simulada**: 6 tiles con los totales, 2 filas por día,
+  fila de totales, oculto y vacío sin sesión, sin desbordamiento a 390 px (la tabla hace scroll dentro
+  de su contenedor). No se pudo probar con una cuenta Freebuff real.
+- **Limitación**: cualquier usuario con sesión puede ver los agregados; no se expone ningún lead ni
+  dato personal. Si debe ser solo del propietario, hace falta una lista de correos autorizados.
+- El panel se carga al iniciar sesión; no se refresca solo ni avisa por correo de un lead nuevo.
+
 ### Para publicar en producción con dominio propio
 
 1. Dominio + correo reales; DNS a Sites; publicar el entorno `production` (hoy sin desplegar).
@@ -419,8 +439,8 @@ Se añade lo que faltaba para que un presupuesto sirva de algo: **a dónde ir co
    cookies si se añade analítica de terceros.
 3. Sustituir la nota del CTA por el bróker real y firmar el acuerdo de encargo/cesión; revisar
    si la actividad exige registro de intermediario de crédito (Ley 5/2019).
-4. Configurar alerta de leads nuevos (correo o panel) con `GET /api/events`, y política de
-   retención de 12 meses.
+4. Configurar alerta de leads nuevos por correo (el panel de embudo ya consulta los agregados con
+   sesión) y política de retención de 12 meses.
 5. Quitar `X-Robots-Tag: noindex` del Worker en producción (hoy se aplica a todo) y dar de alta
    sitemap/robots + Search Console.
 
