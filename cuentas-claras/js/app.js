@@ -41,11 +41,32 @@ function t(key, vars) {
 function loadState() {
   try {
     const raw = JSON.parse(localStorage.getItem(STORAGE));
-    if (raw && typeof raw === 'object') return { ...DEFAULT_STATE, ...raw };
+    if (raw && typeof raw === 'object') return migrateState({ ...DEFAULT_STATE, ...raw });
   } catch (error) {
     /* almacenamiento no disponible */
   }
   return { ...DEFAULT_STATE };
+}
+
+/**
+ * Las sesiones antiguas no guardaban de dónde salía el €/m². Se deduce una sola vez y queda
+ * escrito, para que la pista y el pie del KPI no dependan de comparar importes.
+ */
+function migrateState(next) {
+  if (!['region', 'zone', 'manual'].includes(next.marketSource)) {
+    const hasRef =
+      next.marketRef !== null && next.marketRef !== undefined && next.marketRef !== '';
+    const zone = hasRef
+      ? ZONES.find(
+          (item) =>
+            item.regionId === next.regionId && Number(item.market) === Number(next.marketRef),
+        )
+      : null;
+    next.marketSource = !hasRef ? 'region' : zone ? 'zone' : 'manual';
+    next.marketZoneId = zone ? zone.id : null;
+  }
+  if (next.marketSource !== 'zone') next.marketZoneId = null;
+  return next;
 }
 
 function loadLocale() {
@@ -216,6 +237,10 @@ function bindControls() {
       const key = el.dataset.bind;
       state[key] = readControl(el);
       if (key === 'label') state.label = String(state.label).slice(0, 60);
+      if (key === 'marketRef') {
+        state.marketSource = state.marketRef === null ? 'region' : 'manual';
+        state.marketZoneId = null;
+      }
       computeAndRender({ sync: false });
     });
     el.addEventListener('change', () => {
@@ -223,6 +248,8 @@ function bindControls() {
       if (key === 'regionId') {
         state.regionId = el.value;
         state.marketRef = null;
+        state.marketSource = 'region';
+        state.marketZoneId = null;
         const refInput = $('#marketRef');
         if (refInput) refInput.value = '';
       }
@@ -397,21 +424,27 @@ function computeAndRender({ sync = true } = {}) {
 
 function marketReference() {
   const ref = benchmark();
-  const manual =
-    state.marketRef !== null && state.marketRef !== '' && state.marketRef !== undefined;
-  if (!manual) {
+  const zone =
+    state.marketSource === 'zone' && state.marketZoneId
+      ? ZONES.find((item) => item.id === state.marketZoneId) || null
+      : null;
+  if (zone) return { ref, source: 'zone', date: zone.marketDate, place: zone.marketPlace, zone };
+  if (state.marketSource === 'manual') {
     return {
       ref,
-      source: 'region',
+      source: 'manual',
       date: result.region.marketDate,
       place: regionName(result.region),
     };
   }
-  const zone = zonesFor(result.region.id).find(
-    (item) => Number(item.market) === Number(state.marketRef),
-  );
-  if (zone) return { ref, source: 'zone', date: zone.marketDate, place: zone.marketPlace };
-  return { ref, source: 'manual', date: result.region.marketDate, place: regionName(result.region) };
+  return { ref, source: 'region', date: result.region.marketDate, place: regionName(result.region) };
+}
+
+function marketSourceName() {
+  const { source } = marketReference();
+  if (source === 'zone') return 'Fotocasa';
+  if (source === 'manual') return t('common.ownFigure');
+  return 'idealista';
 }
 
 function marketHintText() {
@@ -650,8 +683,8 @@ function renderZones(budget = maxPrice(state)) {
   const portals = $('#portal-list');
   if (portals) {
     portals.innerHTML = [
-      ['Fotocasa', 'https://www.fotocasa.es/es/comprar/viviendas/'],
-      ['pisos.com', 'https://www.pisos.com/venta/'],
+      ['Fotocasa', 'https://www.fotocasa.es/es/comprar/viviendas/espana/todas-las-zonas/l'],
+      ['pisos.com', 'https://www.pisos.com/'],
     ]
       .map(
         ([name, url]) =>
@@ -671,6 +704,8 @@ function applyZone(zoneId) {
   const zone = ZONES.find((item) => item.id === zoneId);
   if (!zone) return;
   state.marketRef = zone.market || Math.round(result.region.market * zone.index);
+  state.marketSource = 'zone';
+  state.marketZoneId = zone.id;
   state.label = `${zone.name} · ${zone.city}`.slice(0, 60);
   const labelInput = $('#label');
   if (labelInput) labelInput.value = state.label;
@@ -1572,7 +1607,7 @@ async function copySummary() {
     )} ${number(result.tae, locale, 2)} %`,
     `${t('kpi.market')}: ${signedPercent(result.market.diffPct, locale, 1)}`,
     `${t('rent.title')}: ${$('#rent-verdict').textContent}`,
-    `${t('data.sources')}: idealista · Banco de España`,
+    `${t('data.sources')}: ${marketSourceName()} · Banco de España`,
   ];
   try {
     await navigator.clipboard.writeText(lines.join('\n'));
@@ -1692,9 +1727,7 @@ function renderDiag(budget = maxPrice(state)) {
     }
   }
 
-  const zone = zonesFor(result.region.id).find(
-    (item) => Number(item.market) === Number(state.marketRef),
-  );
+  const { zone } = marketReference();
   if (zone) {
     items.push({
       tone: 'neutral',
@@ -1825,6 +1858,8 @@ function setupSummaryBar() {
   const bar = $('#summary-bar');
   const target = document.getElementById('calculadora');
   if (!bar || !target) return;
+  bar.inert = true;
+  bar.setAttribute('aria-hidden', 'true');
   let frame = 0;
   let shown = false;
   const update = () => {
@@ -1835,6 +1870,8 @@ function setupSummaryBar() {
     shown = show;
     bar.classList.toggle('is-visible', show);
     bar.setAttribute('aria-hidden', String(!show));
+    bar.inert = !show;
+    document.body.classList.toggle('has-summary', show);
   };
   const schedule = () => {
     if (frame) return;

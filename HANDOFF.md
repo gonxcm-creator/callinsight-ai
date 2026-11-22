@@ -375,6 +375,26 @@ Se añade lo que faltaba para que un presupuesto sirva de algo: **a dónde ir co
   ni 1280 px, sin errores de consola salvo el beacon de Cloudflare bloqueado por CSP, y la
   pista nombrando Fotocasa tras aplicar una zona.
 
+## Fuente explícita, enlaces y móvil (22/11/2026, tarde)
+
+- **Procedencia del €/m² guardada, no adivinada**: el estado lleva `marketSource`
+  (`region` | `zone` | `manual`) y `marketZoneId`. «Analizar esta zona» marca `zone` con el id
+  de la zona, escribir el campo marca `manual`, vaciarlo vuelve a `region`, y las sesiones
+  antiguas se migran una sola vez en `migrateState()`. La pista, el pie del KPI, el diagnóstico
+  y el resumen copiado leen esa fuente, así que nunca atribuyen a idealista un precio de
+  Fotocasa (ni al contrario).
+- **Barra fija**: cuando está oculta lleva `inert`, `aria-hidden` y `visibility: hidden`, de
+  modo que su enlace no recibe foco por tabulador; al mostrarse, `body.has-summary` reserva
+  84 px para que no tape el final del documento y el toast sube a 92 px.
+- **Enlaces externos roto→válido**: la raíz de Fotocasa devolvía 404 y la de pisos.com también;
+  ahora apuntan a `…/espana/todas-las-zonas/l` (200) y a `https://www.pisos.com/` (200), en la
+  lista de portales y en `SOURCES`.
+- **Móvil**: el menú principal ya no desaparece por debajo de 820 px; pasa a una fila
+  desplazable bajo la barra superior (4 enlaces visibles, sin desbordamiento a 390 px).
+- **Auditoría de interacción** en la preview: tema, copiar, guardar, las cuatro pestañas,
+  los dos órdenes de zonas, «Analizar esta zona», reiniciar y todos los anclajes internos
+  responden; ningún error de consola salvo el beacon de Cloudflare bloqueado por CSP.
+
 **Prompt sugerido para el chat nuevo:**
 
 > Continúa Cuentas Claras Pro en `cuentas-claras/`. Lee `HANDOFF.md` y el commit `0ef9851`.

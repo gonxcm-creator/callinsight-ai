@@ -323,6 +323,10 @@ export const DEFAULT_STATE = {
   savings: 120000,
   otherDebts: 200,
   marketRef: null,
+  // Procedencia explícita del €/m²: 'region' (media autonómica), 'zone' (zona de Fotocasa
+  // elegida con «Analizar esta zona») o 'manual' (lo escribió la persona).
+  marketSource: 'region',
+  marketZoneId: null,
   appreciationPct: 2.5,
   rentGrowthPct: 2,
   altReturnPct: 4,
@@ -502,7 +506,7 @@ export const SOURCES = [
       en: 'Fotocasa — average price per area and homes for sale',
       fr: 'Fotocasa — prix moyen par quartier et biens à vendre',
     },
-    url: 'https://www.fotocasa.es/es/comprar/viviendas/',
+    url: 'https://www.fotocasa.es/es/comprar/viviendas/espana/todas-las-zonas/l',
     date: '2026-11',
   },
   {
@@ -512,7 +516,7 @@ export const SOURCES = [
       en: 'pisos.com — sale listings',
       fr: 'pisos.com — annonces de vente',
     },
-    url: 'https://www.pisos.com/venta/',
+    url: 'https://www.pisos.com/',
     date: '2026-11',
   },
   {
