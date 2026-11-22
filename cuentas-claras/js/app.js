@@ -485,6 +485,7 @@ function bindControls() {
       } catch (error) {
         /* sin almacenamiento */
       }
+      syncThemeChrome();
     });
   }
 
@@ -554,6 +555,14 @@ function bindControls() {
       if (action === 'open') openReport(scope, id);
       if (action === 'export') exportReport(scope, id);
       if (action === 'delete') await deleteReport(scope, id);
+    });
+  }
+
+  const funnelPanel = $('#funnel-panel');
+  if (funnelPanel) {
+    funnelPanel.addEventListener('click', (event) => {
+      if (!event.target.closest('[data-funnel-refresh]')) return;
+      loadFunnel();
     });
   }
 }
@@ -1663,11 +1672,14 @@ function renderFunnel() {
   const title = `<div><h3>${esc(t('account.funnelTitle'))}</h3><p class="hint">${esc(
     t('account.funnelSub'),
   )}</p></div>`;
-  const head = `<div class="card-head funnel-head">${title}<span class="tag">${esc(
+  const refresh = `<button class="btn btn-outline btn-xs" type="button" data-funnel-refresh>${esc(
+    t('account.funnelRefresh'),
+  )}</button>`;
+  const head = `<div class="card-head funnel-head">${title}<div class="funnel-actions"><span class="tag">${esc(
     t('account.funnelWindow'),
-  )}</span></div>`;
+  )}</span>${refresh}</div></div>`;
   if (funnelDenied) {
-    box.innerHTML = `<div class="card-head funnel-head">${title}</div><div class="empty">${esc(
+    box.innerHTML = `<div class="card-head funnel-head">${title}<div class="funnel-actions">${refresh}</div></div><div class="empty">${esc(
       t('account.funnelDenied', { email: session?.user?.email || '' }),
     )}</div>`;
     return;
@@ -1943,6 +1955,21 @@ async function copySummary() {
     }
     area.remove();
   }
+}
+
+function syncThemeChrome() {
+  const dark = document.documentElement.dataset.theme === 'dark';
+  const meta = $('meta[name="theme-color"]');
+  if (meta) {
+    // Las metas originales dependen del sistema; con tema manual manda el elegido.
+    $$('meta[name="theme-color"]').forEach((item) => item.remove());
+    const next = document.createElement('meta');
+    next.name = 'theme-color';
+    next.content = dark ? '#0a0e0b' : '#f4f1e9';
+    document.head.appendChild(next);
+  }
+  const button = $('#theme');
+  if (button) button.setAttribute('aria-pressed', String(dark));
 }
 
 function toast(message) {
@@ -2267,9 +2294,10 @@ function setupLeadForm() {
       }
       if (!res.ok) throw new Error('lead');
       track('lead_sent');
-      form.innerHTML = `<p class="eyebrow">${esc(t('cta.doneEyebrow'))}</p><h4>${esc(
+      form.innerHTML = `<p class="eyebrow">${esc(t('cta.doneEyebrow'))}</p><h4 tabindex="-1" id="lead-done">${esc(
         t('cta.doneTitle'),
       )}</h4><p class="hint">${esc(t('cta.doneText'))}</p>`;
+      $('#lead-done')?.focus();
       toast(t('cta.doneTitle'));
     } catch (error) {
       button.disabled = false;
@@ -2339,6 +2367,7 @@ function init() {
   setupReveal();
   setupSummaryBar();
   setupLeadForm();
+  syncThemeChrome();
   track('calc_view');
   loadSession();
 }

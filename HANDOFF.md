@@ -486,6 +486,32 @@ Se añade lo que faltaba para que un presupuesto sirva de algo: **a dónde ir co
   cuenta de Resend no usa `gonxcm@gmail.com`, definir `LEAD_NOTIFY_TO` con su correo; para enviar a
   cualquier destinatario hace falta verificar un dominio y ajustar `LEAD_FROM`.
 
+## Revisión final y mejoras (22/11/2026)
+
+- **Accesibilidad**: `html lang` se actualiza con el idioma y ahora también se traducen las
+  etiquetas de la navegación principal, el selector de idioma, la barra de resumen y las navs del pie
+  (`nav.label`, `lang.label`, `summary.label`, `footer.tools|resources`). El botón de tema expone
+  `aria-pressed` y actualiza `meta[theme-color]` al cambiar entre claro y oscuro.
+- **Impresión**: el CTA de captación y su formulario quedan fuera del PDF; antes salían vacíos.
+  Comprobado con `emulateMedia('print')`.
+- **Privacidad**: el pie ya no dice «Sin cookies» a secas, sino «Sin cookies de seguimiento · Cálculo
+  local · Datos con fuente». La política añade una sección de cookies que explica las cookies técnicas
+  de sesión de Freebuff.
+- **Embudo**: botón «Actualizar» que recarga los datos sin recargar la página, también visible cuando
+  el correo no está autorizado para reintentar tras cambiar la lista. Verificado con respuestas
+  simuladas (1 → 2).
+- **Aviso por correo**: añade `reply_to` con el email del lead, resuelve la comunidad a su nombre
+  («Comunidad de Madrid» en vez de «madrid») y agrupa miles con `useGrouping: 'always'` como el resto
+  de la app. Tests de `notify.js`: destinatario, configuración, contenido y no-envío sin clave.
+  **30/30 tests**.
+- **Lead**: al confirmar, el foco pasa al título «Datos recibidos» para que un lector de pantalla lo
+  anuncie.
+- **Revisión completa en la preview** sin errores de página ni de consola (salvo el beacon de
+  Cloudflare bloqueado por CSP): pestañas, tema y color de barra, impresión, diálogo de guardado,
+  desplegables, aplicar zona y cambio ES/EN con etiquetas accesibles traducidas.
+- **Pendiente sin cambios**: `RESEND_API_KEY` para activar el correo y la verificación del login real.
+  Producción sigue sin desplegar.
+
 ### Para publicar en producción con dominio propio
 
 1. Dominio + correo reales; DNS a Sites; publicar el entorno `production` (hoy sin desplegar).

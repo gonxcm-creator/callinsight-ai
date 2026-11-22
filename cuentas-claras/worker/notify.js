@@ -1,3 +1,4 @@
+import { REGION_BY_ID } from '../js/data.js';
 import { parseFunnelEmails } from './access.js';
 
 const RESEND_URL = 'https://api.resend.com/emails';
@@ -17,11 +18,12 @@ function valueOrDash(value, unit) {
   if (value === null || value === undefined || value === '') return '—';
   const number = Number(value);
   if (!Number.isFinite(number)) return String(value);
-  return `${number.toLocaleString('es-ES')}${unit ? ` ${unit}` : ''}`;
+  return `${number.toLocaleString('es-ES', { useGrouping: 'always' })}${unit ? ` ${unit}` : ''}`;
 }
 
 /** Texto plano del aviso: solo lo necesario para devolver la llamada con contexto. */
 export function leadEmail(lead, context = {}) {
+  const region = REGION_BY_ID[context.region];
   const lines = [
     `Nombre: ${lead.name}`,
     `Teléfono: ${lead.phone}`,
@@ -34,7 +36,7 @@ export function leadEmail(lead, context = {}) {
     `Cuota: ${valueOrDash(context.payment, '€/mes')}`,
     `Efectivo necesario: ${valueOrDash(context.cash, '€')}`,
     `Ahorros: ${valueOrDash(context.savings, '€')}`,
-    `Comunidad: ${context.region || '—'}`,
+    `Comunidad: ${region ? region.name.es : context.region || '—'}`,
     `Zona: ${context.zone || '—'}`,
     `€/m² de referencia: ${valueOrDash(context.marketRef, '€/m²')}`,
     '',
@@ -64,7 +66,7 @@ export async function sendLeadEmail(env, lead, context) {
         Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ from, to: [to], subject, text }),
+      body: JSON.stringify({ from, to: [to], reply_to: lead.email, subject, text }),
       signal: AbortSignal.timeout(4000),
     });
     if (!res.ok) return { sent: false, reason: `http-${res.status}` };

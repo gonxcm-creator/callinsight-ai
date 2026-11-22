@@ -10,6 +10,7 @@ const es = {
   'meta.description':
     'Analiza una vivienda como un profesional: impuestos por tramos, hipoteca fija, variable o mixta, TAE, amortización, alquilar vs comprar, rentabilidad y valoración de mercado.',
   'a11y.skip': 'Ir a la calculadora',
+  'nav.label': 'Principal',
   'nav.tools': 'Herramientas',
   'nav.data': 'Datos y fuentes',
   'nav.account': 'Mi cuenta',
@@ -488,6 +489,7 @@ const es = {
     'El embudo solo está disponible para la cuenta del propietario. Has entrado como {email}.',
   'account.funnelNotifyOff':
     'El aviso por correo no está configurado: añade el secreto RESEND_API_KEY. Los leads se guardan igualmente.',
+  'account.funnelRefresh': 'Actualizar',
 
   'footer.tagline':
     'Análisis profesional de compra, hipoteca e inversión inmobiliaria. Sin anuncios, sin venta de datos y con las fuentes a la vista.',
@@ -495,7 +497,7 @@ const es = {
   'footer.resources': 'Recursos',
   'footer.legal':
     '© 2026 Cuentas Claras Pro. Datos orientativos; no constituye asesoramiento financiero, fiscal ni una tasación oficial.',
-  'footer.privacy': 'Sin cookies · Medición agregada · Datos con fuente',
+  'footer.privacy': 'Sin cookies de seguimiento · Cálculo local · Datos con fuente',
   'footer.privacyLink': 'Privacidad',
   'footnote.disclaimer':
     'Cálculo orientativo con tipos y precios de {date}. No es una oferta vinculante ni asesoramiento fiscal. Verifica ITP, AJD y condiciones con tu comunidad y tu banco.',
@@ -506,6 +508,7 @@ const en = {
   'meta.description':
     'Analyse a home like a professional: bracketed taxes, fixed, variable or mixed mortgages, APR, early repayment, rent vs buy, returns and market valuation.',
   'a11y.skip': 'Skip to the calculator',
+  'nav.label': 'Main',
   'nav.tools': 'Tools',
   'nav.data': 'Data & sources',
   'nav.account': 'My account',
@@ -983,6 +986,7 @@ const en = {
     'The funnel is only available to the owner account. You are signed in as {email}.',
   'account.funnelNotifyOff':
     'Email alerts are not configured: add the RESEND_API_KEY secret. Leads are still saved.',
+  'account.funnelRefresh': 'Refresh',
 
   'footer.tagline':
     'Professional analysis of property purchase, mortgages and investment. No ads, no data selling, sources in plain sight.',
@@ -990,7 +994,7 @@ const en = {
   'footer.resources': 'Resources',
   'footer.legal':
     '© 2026 Cuentas Claras Pro. Indicative figures; not financial or tax advice, nor an official valuation.',
-  'footer.privacy': 'No cookies · Aggregate measurement · Sourced data',
+  'footer.privacy': 'No tracking cookies · Local calculation · Sourced data',
   'footer.privacyLink': 'Privacy',
   'footnote.disclaimer':
     'Indicative calculation with rates and prices from {date}. Not a binding offer or tax advice. Verify transfer tax, stamp duty and conditions with your region and your bank.',
@@ -1001,6 +1005,7 @@ const fr = {
   'meta.description':
     'Analysez un logement comme un professionnel : fiscalité par tranches, crédit fixe, variable ou mixte, TAEG, remboursement anticipé, louer ou acheter, rentabilité et valorisation.',
   'a11y.skip': 'Aller au calculateur',
+  'nav.label': 'Principal',
   'nav.tools': 'Outils',
   'nav.data': 'Données et sources',
   'nav.account': 'Mon compte',
@@ -1484,6 +1489,7 @@ const fr = {
     'L’entonnoir est réservé au compte du propriétaire. Vous êtes connecté en tant que {email}.',
   'account.funnelNotifyOff':
     'L’alerte e-mail n’est pas configurée : ajoutez le secret RESEND_API_KEY. Les leads sont enregistrés quand même.',
+  'account.funnelRefresh': 'Actualiser',
 
   'footer.tagline':
     'Analyse professionnelle de l’achat, du crédit et de l’investissement immobilier. Sans publicité, sans vente de données et avec les sources visibles.',
@@ -1491,7 +1497,7 @@ const fr = {
   'footer.resources': 'Ressources',
   'footer.legal':
     '© 2026 Cuentas Claras Pro. Chiffres indicatifs ; ni conseil financier ou fiscal, ni expertise officielle.',
-  'footer.privacy': 'Sans cookies · Mesure agrégée · Données sourcées',
+  'footer.privacy': 'Sans cookies de suivi · Calcul local · Données sourcées',
   'footer.privacyLink': 'Confidentialité',
   'footnote.disclaimer':
     'Calcul indicatif avec les taux et prix de {date}. Ce n’est pas une offre ferme ni un conseil fiscal. Vérifiez les droits de mutation, le timbre et les conditions auprès de votre région et de votre banque.',

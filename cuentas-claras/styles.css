@@ -1552,6 +1552,13 @@ button {
   margin: -0.35rem 0 0.7rem;
   color: var(--warn);
 }
+.funnel-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
 .auth-card {
   min-height: 190px;
 }
@@ -1879,6 +1886,7 @@ button {
   .inputs,
   .result-actions,
   .tabs,
+  .cta,
   .section,
   .footer,
   .toast,
