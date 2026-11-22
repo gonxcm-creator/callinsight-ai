@@ -1,6 +1,8 @@
 import { createFreebuffAuth, isSameOriginRequest } from '@freebuff/auth';
 
 import { DEFAULT_STATE, REGION_BY_ID } from '../js/data.js';
+import { canSeeFunnel } from './access.js';
+import { isNotifyConfigured, sendLeadEmail } from './notify.js';
 
 const MAX_BODY = 12000;
 const MAX_REPORTS = 20;
@@ -154,20 +156,6 @@ function sanitizeState(input) {
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const EVENTS = ['calc_view', 'zone_applied', 'cta_view', 'cta_submit', 'lead_sent'];
-
-/** Lista blanca del propietario: `FUNNEL_EMAILS`, separada por comas o espacios. */
-function funnelEmails(env) {
-  return String(env.FUNNEL_EMAILS || '')
-    .split(/[,;\s]+/)
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-function canSeeFunnel(env, user) {
-  const email = String(user?.email || '').trim().toLowerCase();
-  if (!email) return false;
-  return funnelEmails(env).includes(email);
-}
 
 function cleanText(value, max) {
   return String(value ?? '')
@@ -323,6 +311,7 @@ async function api(request, env, instance, url) {
     const id = crypto.randomUUID();
     const at = new Date().toISOString();
     const consentText = cleanText(data.consentText, 400) || 'lead-form-v1';
+    const context = sanitizeContext(data.context);
     await env.DB.prepare(
       'INSERT INTO leads (id, name, phone, email, consent_at, consent_text, source, payload, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
     )
@@ -334,10 +323,15 @@ async function api(request, env, instance, url) {
         at,
         consentText,
         cleanText(data.source, 40) || 'cta',
-        JSON.stringify(sanitizeContext(data.context)),
+        JSON.stringify(context),
         at,
       )
       .run();
+    // El lead ya está guardado: un fallo de correo no puede perderlo ni romper el 201.
+    const mail = await sendLeadEmail(env, { name, phone, email, consentAt: at }, context);
+    if (!mail.sent && mail.reason !== 'not-configured') {
+      console.error('lead_email_failed', mail.reason);
+    }
     return json({ ok: true }, 201);
   }
 
@@ -364,7 +358,7 @@ async function api(request, env, instance, url) {
     const user = await instance.getUser(request);
     if (!user) return json({ error: 'Sign in required' }, 401);
     // Ni siquiera los totales: el embudo es del propietario, no de cualquier cuenta.
-    if (!canSeeFunnel(env, user)) return json({ error: 'Owner only' }, 403);
+    if (!canSeeFunnel(env.FUNNEL_EMAILS, user.email)) return json({ error: 'Owner only' }, 403);
     if (!(await ensureSchema(env))) return json({ error: 'Storage unavailable' }, 503);
     const since = new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
     const rows = await env.DB.prepare(
@@ -390,6 +384,7 @@ async function api(request, env, instance, url) {
       days: [...byDay.values()],
       totals,
       leads: Number(leads?.n || 0),
+      notify: isNotifyConfigured(env),
     });
   }
 

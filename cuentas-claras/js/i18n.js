@@ -472,7 +472,7 @@ const es = {
   'account.readonly': 'Solo lectura',
   'account.funnelTitle': 'Embudo de captación',
   'account.funnelSub':
-    'Eventos agregados por día, sin cookies. Solo visible con sesión iniciada.',
+    'Eventos agregados por día, sin cookies. Solo para la cuenta del propietario.',
   'account.funnelWindow': 'Últimos 30 días',
   'account.funnelLeads': 'Leads recibidos',
   'account.funnelDay': 'Día',
@@ -486,6 +486,8 @@ const es = {
   'account.funnel.lead_sent': 'Lead enviado',
   'account.funnelDenied':
     'El embudo solo está disponible para la cuenta del propietario. Has entrado como {email}.',
+  'account.funnelNotifyOff':
+    'El aviso por correo no está configurado: añade el secreto RESEND_API_KEY. Los leads se guardan igualmente.',
 
   'footer.tagline':
     'Análisis profesional de compra, hipoteca e inversión inmobiliaria. Sin anuncios, sin venta de datos y con las fuentes a la vista.',
@@ -965,7 +967,7 @@ const en = {
   'account.localOnly': 'This browser only',
   'account.readonly': 'Read only',
   'account.funnelTitle': 'Acquisition funnel',
-  'account.funnelSub': 'Daily aggregate events, no cookies. Only visible when signed in.',
+  'account.funnelSub': 'Daily aggregate events, no cookies. Owner account only.',
   'account.funnelWindow': 'Last 30 days',
   'account.funnelLeads': 'Leads received',
   'account.funnelDay': 'Day',
@@ -979,6 +981,8 @@ const en = {
   'account.funnel.lead_sent': 'Lead sent',
   'account.funnelDenied':
     'The funnel is only available to the owner account. You are signed in as {email}.',
+  'account.funnelNotifyOff':
+    'Email alerts are not configured: add the RESEND_API_KEY secret. Leads are still saved.',
 
   'footer.tagline':
     'Professional analysis of property purchase, mortgages and investment. No ads, no data selling, sources in plain sight.',
@@ -1464,7 +1468,7 @@ const fr = {
   'account.readonly': 'Lecture seule',
   'account.funnelTitle': 'Entonnoir de conversion',
   'account.funnelSub':
-    'Événements agrégés par jour, sans cookies. Visible uniquement avec une session.',
+    'Événements agrégés par jour, sans cookies. Réservé au compte du propriétaire.',
   'account.funnelWindow': '30 derniers jours',
   'account.funnelLeads': 'Leads reçus',
   'account.funnelDay': 'Jour',
@@ -1478,6 +1482,8 @@ const fr = {
   'account.funnel.lead_sent': 'Lead envoyé',
   'account.funnelDenied':
     'L’entonnoir est réservé au compte du propriétaire. Vous êtes connecté en tant que {email}.',
+  'account.funnelNotifyOff':
+    'L’alerte e-mail n’est pas configurée : ajoutez le secret RESEND_API_KEY. Les leads sont enregistrés quand même.',
 
   'footer.tagline':
     'Analyse professionnelle de l’achat, du crédit et de l’investissement immobilier. Sans publicité, sans vente de données et avec les sources visibles.',

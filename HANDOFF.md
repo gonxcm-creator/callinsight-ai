@@ -458,6 +458,34 @@ Se añade lo que faltaba para que un presupuesto sirva de algo: **a dónde ir co
 - **Pendiente**: confirmar con una sesión Freebuff real que el correo del propietario coincide; si
   no, el panel mostrará el correo con el que se entró para poder corregir la lista.
 
+## Aviso de lead por correo y desplegables propios (22/11/2026)
+
+- **Aviso por correo**: `worker/notify.js` llama a la API HTTP de Resend (`RESEND_API_KEY`). El
+  destinatario es `LEAD_NOTIFY_TO` o, si falta, el primer correo de `FUNNEL_EMAILS`; el remitente es
+  `LEAD_FROM` (por defecto `Cuentas Claras <onboarding@resend.dev>`, que solo entrega al correo de la
+  cuenta de Resend). El lead se guarda **antes** del envío: si falta la clave o Resend falla, la API
+  sigue devolviendo 201 y se anota `lead_email_failed` en los logs, sin datos personales.
+- **Estado visible**: el panel muestra un aviso ámbar si el correo no está configurado, para que el
+  propietario no crea que los leads avisan solos. Hoy no hay `RESEND_API_KEY`: el lead de prueba
+  «Aviso QA» se guardó con 201 y no se envió correo.
+- **Desplegables de comunidad y estado**: ya no dependen del popup nativo. Se monta un listbox propio
+  (botón + menú) sobre el `<select>` real, que queda oculto y sigue siendo la fuente del valor. Abre
+  con clic, con las flechas, con Home/End y al pulsar la etiqueta; se reposiciona al hacer scroll, se
+  cierra con Escape o al hacer clic fuera y usa 44 px en móvil. El fallo anterior era que el menú se
+  cerraba al instante por el scroll suave de la página.
+- **Sincronización**: `syncControls` ahora ajusta también `conditionId` al estado, así que Reiniciar y
+  abrir un análisis guardado no dejan el desplegable desfasado.
+- **Test del allowlist**: `tests/access.test.js` cubre lista vacía (falla en cerrado), mayúsculas,
+  separadores y correos ajenos. Total **26/26 tests**.
+- **Verificado en la preview con clic real**: abrir los dos desplegables, elegir Cataluña y «Para
+  reformar» (etiqueta, referencia y cálculos actualizados), teclado, clic en la etiqueta, cierre por
+  fuera, Reiniciar (Madrid / Buen estado), cambio a inglés (Community of Madrid / Good condition) y
+  móvil a 390 px sin desbordamiento. El panel muestra el aviso de correo sin configurar solo cuando
+  `notify` es false.
+- **Pendiente**: añadir `RESEND_API_KEY` en Sites → Secrets (preview y, luego, producción). Si la
+  cuenta de Resend no usa `gonxcm@gmail.com`, definir `LEAD_NOTIFY_TO` con su correo; para enviar a
+  cualquier destinatario hace falta verificar un dominio y ajustar `LEAD_FROM`.
+
 ### Para publicar en producción con dominio propio
 
 1. Dominio + correo reales; DNS a Sites; publicar el entorno `production` (hoy sin desplegar).

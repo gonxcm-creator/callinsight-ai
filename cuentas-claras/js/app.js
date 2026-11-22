@@ -184,8 +184,11 @@ function syncControls() {
   $$('input[name="mortgageType"]').forEach((el) => {
     el.checked = el.value === state.mortgageType;
   });
-  const regionSelect = $('#regionId');
-  if (regionSelect) regionSelect.value = state.regionId;
+  $$('select[data-bind]').forEach((el) => {
+    const value = state[el.dataset.bind];
+    if (value !== undefined && el.value !== value) el.value = value;
+  });
+  syncSelectWidgets();
 
   $$('[data-rate]').forEach((el) => {
     el.hidden = el.dataset.rate !== state.mortgageType;
@@ -233,6 +236,187 @@ function readControl(el) {
   }
   if (el.type === 'number') return raw === '' ? 0 : parseNum(raw);
   return raw;
+}
+
+const selectWidgets = [];
+let closeOpenSelect = null;
+
+function syncSelectWidgets() {
+  selectWidgets.forEach(({ select, paint }) => {
+    if (select.isConnected) paint();
+  });
+}
+
+/**
+ * Desplegable propio: el popup nativo del select no es fiable en todos los
+ * navegadores/temas (texto invisible, no abre). El select real sigue en el DOM
+ * como fuente del valor y el cambio se propaga con su evento `change`.
+ */
+function setupSelectWidgets() {
+  $$('.select-wrap > select[data-bind]').forEach((select) => {
+    const wrap = select.parentElement;
+    if (!wrap || wrap.classList.contains('is-enhanced')) return;
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'select-trigger';
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.setAttribute('aria-expanded', 'false');
+    const valueEl = document.createElement('span');
+    valueEl.className = 'select-value';
+    trigger.append(valueEl);
+    trigger.insertAdjacentHTML(
+      'beforeend',
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>',
+    );
+
+    const menu = document.createElement('div');
+    menu.className = 'select-menu';
+    menu.id = `select-menu-${select.id}`;
+    menu.setAttribute('role', 'listbox');
+    menu.hidden = true;
+    trigger.setAttribute('aria-controls', menu.id);
+
+    wrap.classList.add('is-enhanced');
+    wrap.append(trigger, menu);
+    select.tabIndex = -1;
+
+    const label = document.querySelector(`label[for="${select.id}"]`);
+    const labelText = () => (label ? label.textContent.trim() : '');
+
+    function buildMenu() {
+      menu.replaceChildren(
+        ...[...select.options].map((option) => {
+          const item = document.createElement('button');
+          item.type = 'button';
+          item.className = 'select-option';
+          item.setAttribute('role', 'option');
+          item.setAttribute('aria-selected', String(option.value === select.value));
+          item.dataset.value = option.value;
+          item.tabIndex = -1;
+          item.textContent = option.textContent;
+          return item;
+        }),
+      );
+    }
+
+    function paint() {
+      const chosen = select.selectedOptions[0];
+      valueEl.textContent = chosen ? chosen.textContent : '';
+      trigger.setAttribute('aria-label', labelText());
+      if (menu.hidden) buildMenu();
+      else {
+        [...menu.children].forEach((item) => {
+          item.setAttribute('aria-selected', String(item.dataset.value === select.value));
+        });
+      }
+    }
+
+    function close(returnFocus) {
+      if (menu.hidden) return;
+      menu.hidden = true;
+      trigger.setAttribute('aria-expanded', 'false');
+      window.removeEventListener('scroll', onViewportChange, { capture: true });
+      window.removeEventListener('resize', onViewportChange);
+      if (closeOpenSelect === close) closeOpenSelect = null;
+      if (returnFocus) trigger.focus();
+    }
+
+    function onViewportChange() {
+      if (menu.hidden) return;
+      const rect = trigger.getBoundingClientRect();
+      // Solo se cierra si el campo sale de la pantalla; si sigue visible, el menú lo sigue.
+      if (rect.bottom < 0 || rect.top > window.innerHeight) {
+        close(false);
+        return;
+      }
+      place();
+    }
+
+    function place() {
+      const rect = trigger.getBoundingClientRect();
+      const below = window.innerHeight - rect.bottom - 12;
+      const above = rect.top - 12;
+      const placeAbove = below < 220 && above > below;
+      menu.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - rect.width - 8))}px`;
+      menu.style.width = `${rect.width}px`;
+      menu.style.right = 'auto';
+      menu.style.top = placeAbove ? 'auto' : `${Math.round(rect.bottom + 4)}px`;
+      menu.style.bottom = placeAbove ? `${Math.round(window.innerHeight - rect.top + 4)}px` : 'auto';
+      menu.style.maxHeight = `${Math.max(140, Math.min(300, placeAbove ? above : below))}px`;
+    }
+
+    function open() {
+      if (closeOpenSelect && closeOpenSelect !== close) closeOpenSelect(false);
+      buildMenu();
+      menu.hidden = false;
+      trigger.setAttribute('aria-expanded', 'true');
+      closeOpenSelect = close;
+      place();
+      const chosen = menu.querySelector('[aria-selected="true"]') || menu.firstElementChild;
+      chosen?.focus();
+      window.addEventListener('scroll', onViewportChange, { capture: true, passive: true });
+      window.addEventListener('resize', onViewportChange, { passive: true });
+    }
+
+    function choose(value) {
+      const changed = select.value !== value;
+      close(false);
+      if (changed) {
+        select.value = value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      } else {
+        paint();
+      }
+      trigger.focus();
+    }
+
+    trigger.addEventListener('click', () => {
+      if (menu.hidden) open();
+      else close(true);
+    });
+    trigger.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+      event.preventDefault();
+      if (menu.hidden) open();
+    });
+    menu.addEventListener('click', (event) => {
+      const item = event.target.closest('.select-option');
+      if (item) choose(item.dataset.value);
+    });
+    menu.addEventListener('keydown', (event) => {
+      const items = [...menu.children];
+      const index = items.indexOf(document.activeElement);
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        const next =
+          event.key === 'ArrowDown'
+            ? Math.min(items.length - 1, index + 1)
+            : Math.max(0, index - 1);
+        items[next]?.focus();
+      } else if (event.key === 'Home' || event.key === 'End') {
+        event.preventDefault();
+        items[event.key === 'Home' ? 0 : items.length - 1]?.focus();
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        close(true);
+      } else if (event.key === 'Tab') {
+        close(false);
+      }
+    });
+    document.addEventListener('pointerdown', (event) => {
+      if (!wrap.contains(event.target)) close(false);
+    });
+    if (label) {
+      label.addEventListener('click', (event) => {
+        event.preventDefault();
+        open();
+      });
+    }
+
+    selectWidgets.push({ select, paint });
+    paint();
+  });
 }
 
 function bindControls() {
@@ -1523,8 +1707,13 @@ function renderFunnel() {
     : `<tr><td colspan="${FUNNEL_EVENTS.length + 1}" class="funnel-empty">${esc(
         t('account.funnelEmpty'),
       )}</td></tr>`;
+  const notifyWarn =
+    funnel.notify === false
+      ? `<p class="hint funnel-warn">${esc(t('account.funnelNotifyOff'))}</p>`
+      : '';
   box.innerHTML = `${head}
     <div class="funnel-tiles">${tiles}${leadsTile}</div>
+    ${notifyWarn}
     <div class="funnel-table-wrap">
       <table class="funnel-table" aria-label="${esc(t('account.funnelTitle'))}">
         <thead>${headRow}</thead>
@@ -2142,6 +2331,7 @@ function init() {
   applyStaticI18n();
   syncControls();
   bindControls();
+  setupSelectWidgets();
   computeAndRender();
   renderData();
   renderAccount();
