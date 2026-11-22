@@ -155,6 +155,20 @@ function sanitizeState(input) {
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const EVENTS = ['calc_view', 'zone_applied', 'cta_view', 'cta_submit', 'lead_sent'];
 
+/** Lista blanca del propietario: `FUNNEL_EMAILS`, separada por comas o espacios. */
+function funnelEmails(env) {
+  return String(env.FUNNEL_EMAILS || '')
+    .split(/[,;\s]+/)
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function canSeeFunnel(env, user) {
+  const email = String(user?.email || '').trim().toLowerCase();
+  if (!email) return false;
+  return funnelEmails(env).includes(email);
+}
+
 function cleanText(value, max) {
   return String(value ?? '')
     .replace(/[\u0000-\u001f\u007f]/g, ' ')
@@ -349,6 +363,8 @@ async function api(request, env, instance, url) {
   if (url.pathname === '/api/events' && request.method === 'GET') {
     const user = await instance.getUser(request);
     if (!user) return json({ error: 'Sign in required' }, 401);
+    // Ni siquiera los totales: el embudo es del propietario, no de cualquier cuenta.
+    if (!canSeeFunnel(env, user)) return json({ error: 'Owner only' }, 403);
     if (!(await ensureSchema(env))) return json({ error: 'Storage unavailable' }, 503);
     const since = new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
     const rows = await env.DB.prepare(

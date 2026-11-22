@@ -34,6 +34,7 @@ let localReports = loadReports();
 let cloudReports = [];
 let funnel = null;
 let funnelError = false;
+let funnelDenied = false;
 const FUNNEL_EVENTS = ['calc_view', 'zone_applied', 'cta_view', 'cta_submit', 'lead_sent'];
 let toastTimer = null;
 
@@ -1367,6 +1368,7 @@ async function loadCloud() {
 async function loadFunnel() {
   if (!session) {
     funnel = null;
+    funnelDenied = false;
     renderFunnel();
     return;
   }
@@ -1377,14 +1379,24 @@ async function loadFunnel() {
     });
     if (res.status === 401) {
       funnel = null;
+      funnelDenied = false;
+      renderFunnel();
+      return;
+    }
+    if (res.status === 403) {
+      funnel = null;
+      funnelDenied = true;
+      funnelError = false;
       renderFunnel();
       return;
     }
     if (!res.ok) throw new Error('funnel');
     funnel = await res.json();
+    funnelDenied = false;
     funnelError = false;
   } catch (error) {
     funnel = null;
+    funnelDenied = false;
     funnelError = true;
   }
   renderFunnel();
@@ -1464,11 +1476,18 @@ function renderFunnel() {
     return;
   }
   box.hidden = false;
-  const head = `<div class="card-head funnel-head"><div><h3>${esc(
-    t('account.funnelTitle'),
-  )}</h3><p class="hint">${esc(t('account.funnelSub'))}</p></div><span class="tag">${esc(
+  const title = `<div><h3>${esc(t('account.funnelTitle'))}</h3><p class="hint">${esc(
+    t('account.funnelSub'),
+  )}</p></div>`;
+  const head = `<div class="card-head funnel-head">${title}<span class="tag">${esc(
     t('account.funnelWindow'),
   )}</span></div>`;
+  if (funnelDenied) {
+    box.innerHTML = `<div class="card-head funnel-head">${title}</div><div class="empty">${esc(
+      t('account.funnelDenied', { email: session?.user?.email || '' }),
+    )}</div>`;
+    return;
+  }
   if (funnelError) {
     box.innerHTML = `${head}<div class="empty">${esc(t('account.funnelError'))}</div>`;
     return;
@@ -1982,9 +2001,17 @@ function track(name) {
   }
 }
 
+function setLeadAlert(message) {
+  const alert = $('#lead-alert');
+  if (!alert) return;
+  alert.textContent = message || '';
+  alert.hidden = !message;
+}
+
 function setupLeadForm() {
   const form = $('#lead-form');
   if (!form) return;
+  form.addEventListener('input', () => setLeadAlert(''));
   const cta = $('#cta-broker');
   if (cta && typeof IntersectionObserver === 'function') {
     const observer = new IntersectionObserver(
@@ -2012,6 +2039,7 @@ function setupLeadForm() {
     const button = $('#lead-submit');
     button.disabled = true;
     button.textContent = t('cta.sending');
+    setLeadAlert('');
     track('cta_submit');
     try {
       const res = await fetch('/api/leads', {
@@ -2039,6 +2067,15 @@ function setupLeadForm() {
           },
         }),
       });
+      if (res.status === 429) {
+        // El aviso es concreto: cuánto esperar y que no se ha guardado nada.
+        const retry = Number(res.headers.get('Retry-After') || 0);
+        const minutes = Math.max(1, Math.ceil((retry || 900) / 60));
+        setLeadAlert(t('cta.rateLimited', { minutes }));
+        button.disabled = false;
+        button.textContent = t('cta.submit');
+        return;
+      }
       if (!res.ok) throw new Error('lead');
       track('lead_sent');
       form.innerHTML = `<p class="eyebrow">${esc(t('cta.doneEyebrow'))}</p><h4>${esc(

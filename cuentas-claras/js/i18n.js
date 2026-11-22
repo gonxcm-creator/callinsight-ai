@@ -265,6 +265,8 @@ const es = {
   'cta.doneText':
     'Te escribimos en 24-48 h laborables. Mientras tanto, tu análisis sigue guardado en este navegador.',
   'cta.error': 'No se pudo enviar. Revisa los datos e inténtalo otra vez.',
+  'cta.rateLimited':
+    'Has hecho varios intentos seguidos. Espera {minutes} min y vuelve a probar; no hemos guardado nada.',
   'cta.fine':
     'Aún no hay un bróker asociado: te contactamos desde Cuentas Claras. No cedemos tus datos a terceros sin tu permiso.',
   'cta.required': 'Completa nombre, teléfono, email y el consentimiento.',
@@ -482,6 +484,8 @@ const es = {
   'account.funnel.cta_view': 'CTA visto',
   'account.funnel.cta_submit': 'Formulario enviado',
   'account.funnel.lead_sent': 'Lead enviado',
+  'account.funnelDenied':
+    'El embudo solo está disponible para la cuenta del propietario. Has entrado como {email}.',
 
   'footer.tagline':
     'Análisis profesional de compra, hipoteca e inversión inmobiliaria. Sin anuncios, sin venta de datos y con las fuentes a la vista.',
@@ -755,6 +759,8 @@ const en = {
   'cta.doneText':
     'We will write to you within 24-48 working hours. Meanwhile, your analysis stays saved in this browser.',
   'cta.error': 'Could not send. Check the details and try again.',
+  'cta.rateLimited':
+    'You have made several attempts in a row. Wait {minutes} min and try again; nothing was saved.',
   'cta.fine':
     'There is no partner broker yet: we contact you from Cuentas Claras. We do not share your data without your permission.',
   'cta.required': 'Fill in name, phone, email and the consent box.',
@@ -971,6 +977,8 @@ const en = {
   'account.funnel.cta_view': 'CTA seen',
   'account.funnel.cta_submit': 'Form submitted',
   'account.funnel.lead_sent': 'Lead sent',
+  'account.funnelDenied':
+    'The funnel is only available to the owner account. You are signed in as {email}.',
 
   'footer.tagline':
     'Professional analysis of property purchase, mortgages and investment. No ads, no data selling, sources in plain sight.',
@@ -1249,6 +1257,8 @@ const fr = {
   'cta.doneText':
     'Nous vous écrivons sous 24-48 h ouvrées. En attendant, votre analyse reste enregistrée dans ce navigateur.',
   'cta.error': 'Envoi impossible. Vérifiez les données et réessayez.',
+  'cta.rateLimited':
+    'Vous avez fait plusieurs tentatives d’affilée. Attendez {minutes} min et réessayez ; rien n’a été enregistré.',
   'cta.fine':
     "Il n'y a pas encore de courtier partenaire : nous vous contactons depuis Cuentas Claras. Nous ne transmettons pas vos données sans votre accord.",
   'cta.required': 'Complétez le nom, le téléphone, l’e-mail et la case de consentement.',
@@ -1466,6 +1476,8 @@ const fr = {
   'account.funnel.cta_view': 'CTA vu',
   'account.funnel.cta_submit': 'Formulaire envoyé',
   'account.funnel.lead_sent': 'Lead envoyé',
+  'account.funnelDenied':
+    'L’entonnoir est réservé au compte du propriétaire. Vous êtes connecté en tant que {email}.',
 
   'footer.tagline':
     'Analyse professionnelle de l’achat, du crédit et de l’investissement immobilier. Sans publicité, sans vente de données et avec les sources visibles.',

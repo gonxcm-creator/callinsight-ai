@@ -428,9 +428,35 @@ Se añade lo que faltaba para que un presupuesto sirva de algo: **a dónde ir co
 - **Panel comprobado en navegador con sesión simulada**: 6 tiles con los totales, 2 filas por día,
   fila de totales, oculto y vacío sin sesión, sin desbordamiento a 390 px (la tabla hace scroll dentro
   de su contenedor). No se pudo probar con una cuenta Freebuff real.
-- **Limitación**: cualquier usuario con sesión puede ver los agregados; no se expone ningún lead ni
-  dato personal. Si debe ser solo del propietario, hace falta una lista de correos autorizados.
+- **Acceso restringido**: `GET /api/events` exige sesión y que el correo esté en la variable
+  `FUNNEL_EMAILS` (lista separada por comas). Si falta la lista o el correo no está, responde 403 y
+  la tarjeta explica que es solo para la cuenta del propietario, mostrando el correo con el que se
+  entró. No se expone ningún lead ni dato personal.
 - El panel se carga al iniciar sesión; no se refresca solo ni avisa por correo de un lead nuevo.
+
+## Propietario, aviso de límite y controles (22/11/2026)
+
+- **Embudo solo para el propietario**: lista blanca en `FUNNEL_EMAILS` (separada por comas o
+  espacios, sin distinguir mayúsculas). En preview está configurada con `gonxcm@gmail.com`, el correo
+  de autor de los commits; si la cuenta de Freebuff usa otro, hay que cambiar el secreto. Sin lista,
+  el embudo queda cerrado para todos (falla en cerrado).
+- **Aviso claro al superar el límite**: si `POST /api/leads` responde 429, el formulario muestra un
+  aviso dentro del propio formulario con los minutos de espera (`Retry-After`), reactiva el botón y
+  no deja el formulario bloqueado. El texto dice expresamente que no se ha guardado nada.
+- **Desplegables de comunidad y estado**: la causa probable era el contraste del desplegable nativo
+  en tema oscuro (el CSS no declaraba `color-scheme`, y hasta la barra de scroll salía clara). Ahora
+  `:root` es `light` y `[data-theme='dark']` es `dark`, con `option` en fondo/texto del tema. En móvil
+  miden 44 px y usan 16 px para evitar el zoom de iOS. Verificado: cambiar comunidad y estado
+  actualiza etiqueta, referencia de mercado y cálculos.
+- **Menú a 860 px**: el corte a fila desplazable pasa de 820 a 980 px, así que «Mi cuenta» ya no se
+  recorta entre 820 y 980 px. A 390 px la fila sigue desplazándose sin desbordar la página.
+- **Verificado en la preview**: panel con sesión simulada de propietario (6 cifras y tabla), cuenta
+  ajena con 403 (solo aviso, sin cifras), aviso de 429 con «Espera 10 min» y botón activo, tema
+  oscuro (`color-scheme: dark`, opciones legibles), menú sin recorte a 860 px, sin desbordamiento a
+  390 px, 23/23 tests, build 57,8 KB y `/api/events` 401 sin sesión. El secreto `FUNNEL_EMAILS` figura
+  como binding en el entorno preview.
+- **Pendiente**: confirmar con una sesión Freebuff real que el correo del propietario coincide; si
+  no, el panel mostrará el correo con el que se entró para poder corregir la lista.
 
 ### Para publicar en producción con dominio propio
 
@@ -440,7 +466,8 @@ Se añade lo que faltaba para que un presupuesto sirva de algo: **a dónde ir co
 3. Sustituir la nota del CTA por el bróker real y firmar el acuerdo de encargo/cesión; revisar
    si la actividad exige registro de intermediario de crédito (Ley 5/2019).
 4. Configurar alerta de leads nuevos por correo (el panel de embudo ya consulta los agregados con
-   sesión) y política de retención de 12 meses.
+   sesión), añadir `FUNNEL_EMAILS` también al entorno de producción y fijar la política de retención
+   de 12 meses.
 5. Quitar `X-Robots-Tag: noindex` del Worker en producción (hoy se aplica a todo) y dar de alta
    sitemap/robots + Search Console.
 
