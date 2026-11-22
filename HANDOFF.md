@@ -395,6 +395,35 @@ Se añade lo que faltaba para que un presupuesto sirva de algo: **a dónde ir co
   los dos órdenes de zonas, «Analizar esta zona», reiniciar y todos los anclajes internos
   responden; ningún error de consola salvo el beacon de Cloudflare bloqueado por CSP.
 
+## Captación y embudo (22/11/2026, tarde)
+
+- **CTA de hipoteca** (`#cta-broker`, bajo el diagnóstico): nombre, teléfono, email y casilla de
+  consentimiento RGPD sin marcar por defecto, honeypot oculto y nota honesta («aún no hay bróker
+  asociado»). Al enviar, el formulario se sustituye por un bloque de confirmación.
+- **Backend** (`worker/index.js`): `POST /api/leads` (control same-origin, validación, honeypot,
+  guarda el consentimiento con fecha y texto, y solo números y cadenas cortas del análisis) y
+  `POST /api/events` (contadores agregados por día y evento, sin IP ni cookies). `GET /api/events`
+  exige sesión y devuelve el embudo y el total de leads.
+- **Eventos**: `calc_view`, `zone_applied`, `cta_view`, `cta_submit`, `lead_sent`; el Worker
+  descarta cualquier otro nombre con 204.
+- **Privacidad**: página estática `/privacidad` enlazada desde el CTA y el pie, marcada como
+  borrador hasta completar responsable y correo.
+- **Verificado en la preview**: sin consentimiento no hay POST, envío válido 201, eventos 204,
+  `/api/leads` sin Origin 403, `GET /api/events` 401, `/privacidad` 200 y sin desbordamiento a
+  390 px. Se creó un lead de prueba («Prueba QA», qa@example.com) en la D1 de preview.
+
+### Para publicar en producción con dominio propio
+
+1. Dominio + correo reales; DNS a Sites; publicar el entorno `production` (hoy sin desplegar).
+2. Completar `privacidad.html` (responsable, NIF, dirección, email) y añadir aviso legal y
+   cookies si se añade analítica de terceros.
+3. Sustituir la nota del CTA por el bróker real y firmar el acuerdo de encargo/cesión; revisar
+   si la actividad exige registro de intermediario de crédito (Ley 5/2019).
+4. Configurar alerta de leads nuevos (correo o panel) con `GET /api/events`, y política de
+   retención de 12 meses.
+5. Quitar `X-Robots-Tag: noindex` del Worker en producción (hoy se aplica a todo) y dar de alta
+   sitemap/robots + Search Console.
+
 **Prompt sugerido para el chat nuevo:**
 
 > Continúa Cuentas Claras Pro en `cuentas-claras/`. Lee `HANDOFF.md` y el commit `0ef9851`.

@@ -2400,3 +2400,100 @@ body.has-summary .toast {
     display: none;
   }
 }
+
+/* Formulario de captación (CTA hipotecario) */
+.cta {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 1.4rem;
+  margin: 0.4rem 0 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 5%, var(--surface)),
+    var(--surface)
+  );
+}
+.cta h3 {
+  margin: 0.15rem 0 0.4rem;
+}
+.cta p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+  line-height: 1.55;
+}
+.cta-points {
+  list-style: none;
+  margin: 0.8rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.84rem;
+  color: var(--ink-2);
+}
+.cta-points li {
+  position: relative;
+  padding-left: 1.4rem;
+}
+.cta-points li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--good);
+  font-weight: 700;
+}
+.cta-form {
+  display: grid;
+  gap: 0.55rem;
+  align-content: start;
+}
+.cta-form .field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+.consent {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.consent input {
+  margin-top: 0.12rem;
+  width: 1.05rem;
+  height: 1.05rem;
+  flex: none;
+  accent-color: var(--accent);
+}
+.cta-form .trap {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.cta-form .btn {
+  justify-self: start;
+}
+.cta-fine {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.cta-form a {
+  color: var(--accent);
+}
+@media (max-width: 880px) {
+  .cta {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 420px) {
+  .cta-form .field-row {
+    grid-template-columns: 1fr;
+  }
+}

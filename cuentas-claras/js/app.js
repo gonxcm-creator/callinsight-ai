@@ -706,6 +706,7 @@ function applyZone(zoneId) {
   state.marketRef = zone.market || Math.round(result.region.market * zone.index);
   state.marketSource = 'zone';
   state.marketZoneId = zone.id;
+  track('zone_applied');
   state.label = `${zone.name} · ${zone.city}`.slice(0, 60);
   const labelInput = $('#label');
   if (labelInput) labelInput.value = state.label;
@@ -1854,6 +1855,95 @@ function renderCompare() {
       .join('')}</tbody>`;
 }
 
+/* ------------------------------------------------------------------ */
+/* Embudo: eventos propios, sin cookies ni datos personales            */
+/* ------------------------------------------------------------------ */
+
+function track(name) {
+  try {
+    fetch('/api/events', {
+      method: 'POST',
+      credentials: 'same-origin',
+      keepalive: true,
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ name }),
+    }).catch(() => {});
+  } catch (error) {
+    /* la analítica es best-effort: nunca rompe la página */
+  }
+}
+
+function setupLeadForm() {
+  const form = $('#lead-form');
+  if (!form) return;
+  const cta = $('#cta-broker');
+  if (cta && typeof IntersectionObserver === 'function') {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0].isIntersecting) return;
+        observer.disconnect();
+        track('cta_view');
+      },
+      { threshold: 0.35 },
+    );
+    observer.observe(cta);
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const name = $('#lead-name').value.trim();
+    const phone = $('#lead-phone').value.trim();
+    const email = $('#lead-email').value.trim();
+    const consent = $('#lead-consent').checked;
+    const digits = phone.replace(/\D/g, '');
+    if (name.length < 2 || !consent) return toast(t('cta.required'));
+    if (digits.length < 9) return toast(t('cta.invalidPhone'));
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return toast(t('cta.invalidEmail'));
+
+    const button = $('#lead-submit');
+    button.disabled = true;
+    button.textContent = t('cta.sending');
+    track('cta_submit');
+    try {
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          name,
+          phone,
+          email,
+          consent: true,
+          consentText: t('cta.consent'),
+          source: 'cta-broker',
+          company: $('#lead-company').value,
+          context: {
+            price: result.price,
+            down: result.down,
+            years: result.years,
+            payment: Math.round(result.payment),
+            cash: result.cash,
+            savings: Number(state.savings) || 0,
+            region: state.regionId,
+            zone: state.marketSource === 'zone' ? state.marketZoneId || '' : '',
+            marketRef: Number(state.marketRef) || 0,
+          },
+        }),
+      });
+      if (!res.ok) throw new Error('lead');
+      track('lead_sent');
+      form.innerHTML = `<p class="eyebrow">${esc(t('cta.doneEyebrow'))}</p><h4>${esc(
+        t('cta.doneTitle'),
+      )}</h4><p class="hint">${esc(t('cta.doneText'))}</p>`;
+      toast(t('cta.doneTitle'));
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = t('cta.submit');
+      toast(t('cta.error'));
+    }
+  });
+}
+
 function setupSummaryBar() {
   const bar = $('#summary-bar');
   const target = document.getElementById('calculadora');
@@ -1912,6 +2002,8 @@ function init() {
   setTab(activeTab);
   setupReveal();
   setupSummaryBar();
+  setupLeadForm();
+  track('calc_view');
   loadSession();
 }
 

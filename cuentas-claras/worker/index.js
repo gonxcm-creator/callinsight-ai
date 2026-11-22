@@ -59,6 +59,30 @@ async function ensureSchema(env) {
     env.DB.prepare(
       'CREATE INDEX IF NOT EXISTS idx_reports_user ON reports (user_id, created_at DESC)',
     ),
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS leads (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        email TEXT NOT NULL,
+        consent_at TEXT NOT NULL,
+        consent_text TEXT NOT NULL,
+        source TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )`,
+    ),
+    env.DB.prepare(
+      'CREATE INDEX IF NOT EXISTS idx_leads_created ON leads (created_at DESC)',
+    ),
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS events (
+        name TEXT NOT NULL,
+        day TEXT NOT NULL,
+        count INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (name, day)
+      )`,
+    ),
   ]);
   try {
     await schemaPromise;
@@ -97,6 +121,32 @@ function sanitizeState(input) {
     } else if (typeof DEFAULT_STATE[key] === 'number') {
       const n = Number(value);
       if (Number.isFinite(n)) out[key] = clampNumber(n, -1000000, 1000000000);
+    }
+  }
+  return out;
+}
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const EVENTS = ['calc_view', 'zone_applied', 'cta_view', 'cta_submit', 'lead_sent'];
+
+function cleanText(value, max) {
+  return String(value ?? '')
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .trim()
+    .slice(0, max);
+}
+
+/** Solo números y textos cortos: el anuncio del CTA nunca guarda datos personales. */
+function sanitizeContext(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+  const out = {};
+  for (const [key, value] of Object.entries(input).slice(0, 20)) {
+    const cleanKey = cleanText(key, 24);
+    if (!cleanKey) continue;
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      out[cleanKey] = Math.round(value * 100) / 100;
+    } else if (typeof value === 'string') {
+      out[cleanKey] = cleanText(value, 80);
     }
   }
   return out;
@@ -172,6 +222,69 @@ async function api(request, env, instance, url) {
       .bind(id, user.sub, name, JSON.stringify(state), createdAt)
       .run();
     return json({ report: { id, name, createdAt, state } }, 201);
+  }
+
+  if (url.pathname === '/api/leads' && request.method === 'POST') {
+    if (!isSameOriginRequest(request, env.APP_ORIGIN)) return json({ error: 'Forbidden' }, 403);
+    const body = await readBody(request);
+    if (body.tooLarge) return json({ error: 'Payload too large' }, 413);
+    if (body.invalid) return json({ error: 'Invalid JSON' }, 400);
+    const data = body.data && typeof body.data === 'object' ? body.data : {};
+    // Honeypot: los bots rellenan el campo oculto; se responde 201 sin guardar nada.
+    if (cleanText(data.company, 40)) return json({ ok: true }, 201);
+    const name = cleanText(data.name, 80);
+    const phone = cleanText(data.phone, 24);
+    const email = cleanText(data.email, 120);
+    const digits = phone.replace(/\D/g, '');
+    if (name.length < 2) return json({ error: 'Name required' }, 400);
+    if (digits.length < 9 || digits.length > 15) return json({ error: 'Invalid phone' }, 400);
+    if (!EMAIL.test(email)) return json({ error: 'Invalid email' }, 400);
+    if (data.consent !== true) return json({ error: 'Consent required' }, 400);
+    if (!(await ensureSchema(env))) return json({ error: 'Storage unavailable' }, 503);
+    const id = crypto.randomUUID();
+    const at = new Date().toISOString();
+    const consentText = cleanText(data.consentText, 400) || 'lead-form-v1';
+    await env.DB.prepare(
+      'INSERT INTO leads (id, name, phone, email, consent_at, consent_text, source, payload, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    )
+      .bind(
+        id,
+        name,
+        phone,
+        email,
+        at,
+        consentText,
+        cleanText(data.source, 40) || 'cta',
+        JSON.stringify(sanitizeContext(data.context)),
+        at,
+      )
+      .run();
+    return json({ ok: true }, 201);
+  }
+
+  if (url.pathname === '/api/events' && request.method === 'POST') {
+    if (!isSameOriginRequest(request, env.APP_ORIGIN)) return json({ error: 'Forbidden' }, 403);
+    const body = await readBody(request);
+    if (body.tooLarge || body.invalid) return new Response(null, { status: 204 });
+    const name = cleanText(body.data?.name, 40);
+    if (!EVENTS.includes(name)) return new Response(null, { status: 204 });
+    if (!(await ensureSchema(env))) return json({ error: 'Storage unavailable' }, 503);
+    const day = new Date().toISOString().slice(0, 10);
+    await env.DB.prepare(
+      'INSERT INTO events (name, day, count) VALUES (?, ?, 1) ON CONFLICT(name, day) DO UPDATE SET count = count + 1',
+    )
+      .bind(name, day)
+      .run();
+    return new Response(null, { status: 204 });
+  }
+
+  if (url.pathname === '/api/events' && request.method === 'GET') {
+    const user = await instance.getUser(request);
+    if (!user) return json({ error: 'Sign in required' }, 401);
+    if (!(await ensureSchema(env))) return json({ error: 'Storage unavailable' }, 503);
+    const rows = await env.DB.prepare('SELECT name, day, count FROM events ORDER BY day DESC LIMIT 400').all();
+    const leads = await env.DB.prepare('SELECT COUNT(*) AS n FROM leads').first();
+    return json({ events: rows.results || [], leads: Number(leads?.n || 0) });
   }
 
   const match = url.pathname.match(/^\/api\/reports\/([^/]+)$/);

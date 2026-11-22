@@ -245,6 +245,31 @@ const es = {
   'kpi.paymentFoot': '{type} · {rate} % · {years} años',
   'kpi.marketFoot': 'Referencia: {ref} €/m² · {date}',
   'kpi.marketFootZone': 'Referencia: {ref} €/m² · Fotocasa {date}',
+  'cta.eyebrow': 'Hipoteca',
+  'cta.title': '¿Quieres que revisen tu caso?',
+  'cta.text':
+    'Déjanos tus datos y te contactamos para comparar ofertas con tu perfil. Sin coste para ti.',
+  'cta.point1': 'Te contactamos en 24-48 h laborables.',
+  'cta.point2': 'Comparamos con tus números reales, no con una media.',
+  'cta.point3': 'Sin compromiso: puedes decir que no.',
+  'cta.name': 'Nombre',
+  'cta.phone': 'Teléfono',
+  'cta.email': 'Email',
+  'cta.consent':
+    'Acepto que Cuentas Claras guarde estos datos para contactarme sobre mi hipoteca. Puedo retirar el consentimiento cuando quiera.',
+  'cta.privacyLink': 'Política de privacidad',
+  'cta.submit': 'Quiero que me contacten',
+  'cta.sending': 'Enviando…',
+  'cta.doneEyebrow': 'Recibido',
+  'cta.doneTitle': 'Datos recibidos',
+  'cta.doneText':
+    'Te escribimos en 24-48 h laborables. Mientras tanto, tu análisis sigue guardado en este navegador.',
+  'cta.error': 'No se pudo enviar. Revisa los datos e inténtalo otra vez.',
+  'cta.fine':
+    'Aún no hay un bróker asociado: te contactamos desde Cuentas Claras. No cedemos tus datos a terceros sin tu permiso.',
+  'cta.required': 'Completa nombre, teléfono, email y el consentimiento.',
+  'cta.invalidPhone': 'Ese teléfono no parece válido.',
+  'cta.invalidEmail': 'Ese email no parece válido.',
   'kpi.marketFootManual': 'Referencia: {ref} €/m² · tu dato',
   'property.marketHintZone': '{price} €/m² · Fotocasa {date} · {place}',
   'property.marketHintManual': '{price} €/m² · tu referencia · {region}',
@@ -450,7 +475,8 @@ const es = {
   'footer.resources': 'Recursos',
   'footer.legal':
     '© 2026 Cuentas Claras Pro. Datos orientativos; no constituye asesoramiento financiero, fiscal ni una tasación oficial.',
-  'footer.privacy': 'Sin cookies de seguimiento · Cálculo local · Datos con fuente',
+  'footer.privacy': 'Sin cookies · Medición agregada · Datos con fuente',
+  'footer.privacyLink': 'Privacidad',
   'footnote.disclaimer':
     'Cálculo orientativo con tipos y precios de {date}. No es una oferta vinculante ni asesoramiento fiscal. Verifica ITP, AJD y condiciones con tu comunidad y tu banco.',
 };
@@ -695,6 +721,31 @@ const en = {
   'kpi.paymentFoot': '{type} · {rate} % · {years} years',
   'kpi.marketFoot': 'Reference: {ref} €/m² · {date}',
   'kpi.marketFootZone': 'Reference: {ref} €/m² · Fotocasa {date}',
+  'cta.eyebrow': 'Mortgage',
+  'cta.title': 'Want us to review your case?',
+  'cta.text':
+    'Leave your details and we will get in touch to compare offers with your profile. Free for you.',
+  'cta.point1': 'We contact you within 24-48 working hours.',
+  'cta.point2': 'We compare with your real numbers, not an average.',
+  'cta.point3': 'No obligation: you can say no.',
+  'cta.name': 'Name',
+  'cta.phone': 'Phone',
+  'cta.email': 'Email',
+  'cta.consent':
+    'I agree that Cuentas Claras stores these details to contact me about my mortgage. I can withdraw consent at any time.',
+  'cta.privacyLink': 'Privacy policy',
+  'cta.submit': 'Contact me',
+  'cta.sending': 'Sending…',
+  'cta.doneEyebrow': 'Received',
+  'cta.doneTitle': 'Details received',
+  'cta.doneText':
+    'We will write to you within 24-48 working hours. Meanwhile, your analysis stays saved in this browser.',
+  'cta.error': 'Could not send. Check the details and try again.',
+  'cta.fine':
+    'There is no partner broker yet: we contact you from Cuentas Claras. We do not share your data without your permission.',
+  'cta.required': 'Fill in name, phone, email and the consent box.',
+  'cta.invalidPhone': 'That phone number does not look valid.',
+  'cta.invalidEmail': 'That email does not look valid.',
   'kpi.marketFootManual': 'Reference: {ref} €/m² · your figure',
   'property.marketHintZone': '{price} €/m² · Fotocasa {date} · {place}',
   'property.marketHintManual': '{price} €/m² · your reference · {region}',
@@ -900,7 +951,8 @@ const en = {
   'footer.resources': 'Resources',
   'footer.legal':
     '© 2026 Cuentas Claras Pro. Indicative figures; not financial or tax advice, nor an official valuation.',
-  'footer.privacy': 'No tracking cookies · Local calculation · Sourced data',
+  'footer.privacy': 'No cookies · Aggregate measurement · Sourced data',
+  'footer.privacyLink': 'Privacy',
   'footnote.disclaimer':
     'Indicative calculation with rates and prices from {date}. Not a binding offer or tax advice. Verify transfer tax, stamp duty and conditions with your region and your bank.',
 };
@@ -1150,6 +1202,31 @@ const fr = {
   'kpi.paymentFoot': '{type} · {rate} % · {years} ans',
   'kpi.marketFoot': 'Référence : {ref} €/m² · {date}',
   'kpi.marketFootZone': 'Référence : {ref} €/m² · Fotocasa {date}',
+  'cta.eyebrow': 'Prêt',
+  'cta.title': 'Vous voulez faire réviser votre dossier ?',
+  'cta.text':
+    'Laissez vos coordonnées et nous vous contactons pour comparer des offres selon votre profil. Sans frais pour vous.',
+  'cta.point1': 'Nous vous contactons sous 24-48 h ouvrées.',
+  'cta.point2': 'Nous comparons avec vos chiffres réels, pas avec une moyenne.',
+  'cta.point3': 'Sans engagement : vous pouvez refuser.',
+  'cta.name': 'Nom',
+  'cta.phone': 'Téléphone',
+  'cta.email': 'E-mail',
+  'cta.consent':
+    "J'accepte que Cuentas Claras conserve ces données pour me contacter au sujet de mon prêt. Je peux retirer mon consentement à tout moment.",
+  'cta.privacyLink': 'Politique de confidentialité',
+  'cta.submit': 'Je veux être contacté',
+  'cta.sending': 'Envoi…',
+  'cta.doneEyebrow': 'Reçu',
+  'cta.doneTitle': 'Coordonnées reçues',
+  'cta.doneText':
+    'Nous vous écrivons sous 24-48 h ouvrées. En attendant, votre analyse reste enregistrée dans ce navigateur.',
+  'cta.error': 'Envoi impossible. Vérifiez les données et réessayez.',
+  'cta.fine':
+    "Il n'y a pas encore de courtier partenaire : nous vous contactons depuis Cuentas Claras. Nous ne transmettons pas vos données sans votre accord.",
+  'cta.required': 'Complétez le nom, le téléphone, l’e-mail et la case de consentement.',
+  'cta.invalidPhone': 'Ce téléphone ne semble pas valide.',
+  'cta.invalidEmail': 'Cet e-mail ne semble pas valide.',
   'kpi.marketFootManual': 'Référence : {ref} €/m² · votre chiffre',
   'property.marketHintZone': '{price} €/m² · Fotocasa {date} · {place}',
   'property.marketHintManual': '{price} €/m² · votre référence · {region}',
@@ -1355,7 +1432,8 @@ const fr = {
   'footer.resources': 'Ressources',
   'footer.legal':
     '© 2026 Cuentas Claras Pro. Chiffres indicatifs ; ni conseil financier ou fiscal, ni expertise officielle.',
-  'footer.privacy': 'Sans cookies de suivi · Calcul local · Données sourcées',
+  'footer.privacy': 'Sans cookies · Mesure agrégée · Données sourcées',
+  'footer.privacyLink': 'Confidentialité',
   'footnote.disclaimer':
     'Calcul indicatif avec les taux et prix de {date}. Ce n’est pas une offre ferme ni un conseil fiscal. Vérifiez les droits de mutation, le timbre et les conditions auprès de votre région et de votre banque.',
 };

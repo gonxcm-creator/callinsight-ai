@@ -448,6 +448,57 @@
             </p>
           </article>
 
+          <article class="card cta" id="cta-broker">
+            <div class="cta-copy">
+              <p class="eyebrow" data-i18n="cta.eyebrow">Hipoteca</p>
+              <h3 data-i18n="cta.title">¿Quieres que revisen tu caso?</h3>
+              <p data-i18n="cta.text">
+                Déjanos tus datos y te contactamos para comparar ofertas con tu perfil. Sin coste para ti.
+              </p>
+              <ul class="cta-points">
+                <li data-i18n="cta.point1">Te contactamos en 24-48 h laborables.</li>
+                <li data-i18n="cta.point2">Comparamos con tus números reales, no con una media.</li>
+                <li data-i18n="cta.point3">Sin compromiso: puedes decir que no.</li>
+              </ul>
+            </div>
+            <form class="cta-form" id="lead-form" novalidate>
+              <div class="field-row">
+                <label class="field">
+                  <span data-i18n="cta.name">Nombre</span>
+                  <input id="lead-name" name="name" autocomplete="name" maxlength="60" required />
+                </label>
+                <label class="field">
+                  <span data-i18n="cta.phone">Teléfono</span>
+                  <input id="lead-phone" name="phone" type="tel" autocomplete="tel" maxlength="20" required />
+                </label>
+              </div>
+              <label class="field">
+                <span data-i18n="cta.email">Email</span>
+                <input id="lead-email" name="email" type="email" autocomplete="email" maxlength="120" required />
+              </label>
+              <label class="consent">
+                <input type="checkbox" id="lead-consent" required />
+                <span data-i18n="cta.consent">
+                  Acepto que Cuentas Claras guarde estos datos para contactarme sobre mi hipoteca.
+                  Puedo retirar el consentimiento cuando quiera.
+                </span>
+              </label>
+              <input class="trap" id="lead-company" name="company" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" />
+              <button class="btn btn-primary" type="submit" id="lead-submit" data-i18n="cta.submit">
+                Quiero que me contacten
+              </button>
+              <p class="hint cta-fine" data-i18n="cta.fine">
+                Aún no hay un bróker asociado: te contactamos desde Cuentas Claras. No cedemos tus datos
+                a terceros sin tu permiso.
+              </p>
+              <p class="hint">
+                <a href="privacidad" target="_blank" rel="noopener" data-i18n="cta.privacyLink">
+                  Política de privacidad
+                </a>
+              </p>
+            </form>
+          </article>
+
           <div class="tabs" role="tablist">
             <button role="tab" id="tab-buy" aria-controls="panel-buy" aria-selected="true" data-tab="buy">
               <span data-i18n="tabs.buy">Compra</span>
@@ -812,6 +863,7 @@
           <a href="#datos" data-i18n="nav.data">Datos y fuentes</a>
           <a href="#cuenta" data-i18n="nav.account">Mi cuenta</a>
           <a href="#datos" data-i18n="method.title">Cómo se calcula</a>
+          <a href="privacidad" data-i18n="footer.privacyLink">Privacidad</a>
         </nav>
       </div>
       <div class="shell footer-legal">
