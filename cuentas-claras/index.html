@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Cuentas Claras Pro · La calculadora científica de la vivienda</title>
+    <meta
+      name="description"
+      content="Analiza una vivienda como un profesional: impuestos por tramos, hipoteca fija, variable o mixta, TAE, amortización, alquilar vs comprar, rentabilidad, valoración de mercado y fuentes. 3 idiomas y análisis guardados."
+    />
+    <meta name="theme-color" content="#f4f1e9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a0e0b" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="preload" href="fonts/instrument-serif.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="fonts/inter.woff2" as="font" type="font/woff2" crossorigin />
+    <script src="js/theme-init.js"></script>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body id="top">
+    <a class="skip" href="#calculadora" data-i18n="a11y.skip">Ir a la calculadora</a>
+    <div class="grain" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <div class="shell topbar-inner">
+        <a class="brand" href="#top" aria-label="Cuentas Claras">
+          <span class="brand-mark" aria-hidden="true">€</span>
+          <span class="brand-name">Cuentas<em>Claras</em></span>
+          <span class="brand-badge">PRO</span>
+        </a>
+
+        <nav class="main-nav" aria-label="Principal">
+          <a href="#calculadora" data-i18n="nav.tools">Herramientas</a>
+          <a href="#datos" data-i18n="nav.data">Datos y fuentes</a>
+          <a href="#cuenta" data-i18n="nav.account">Mi cuenta</a>
+        </nav>
+
+        <div class="top-actions">
+          <label class="lang-select">
+            <span class="sr-only" data-i18n="lang.label">Idioma</span>
+            <select id="lang" aria-label="Idioma">
+              <option value="es">ES</option>
+              <option value="en">EN</option>
+              <option value="fr">FR</option>
+            </select>
+          </label>
+          <button class="icon-btn" id="theme" type="button" aria-label="Cambiar tema" data-i18n-aria-label="theme.toggle">
+            <svg class="ico-sun" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="4.2"></circle>
+              <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.2 5.2l1.6 1.6M17.2 17.2l1.6 1.6M18.8 5.2l-1.6 1.6M6.8 17.2l-1.6 1.6"></path>
+            </svg>
+            <svg class="ico-moon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20.5 14.6A8.6 8.6 0 0 1 9.4 3.5a8.6 8.6 0 1 0 11.1 11.1Z"></path>
+            </svg>
+          </button>
+          <a class="btn btn-outline btn-sm account-link" href="#cuenta" id="account-link">
+            <span data-i18n="account.signinShort">Entrar</span>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main class="shell">
+      <!-- Hero -->
+      <section class="hero">
+        <p class="eyebrow"><span class="dot-live" aria-hidden="true"></span><span data-i18n="hero.eyebrow">Analizador profesional de vivienda · España</span></p>
+        <h1>
+          <span data-i18n="hero.title1">La calculadora científica</span>
+          <em data-i18n="hero.title2">de la vivienda.</em>
+        </h1>
+        <p class="hero-sub" data-i18n="hero.sub">
+          Impuestos por tramos, hipoteca con TAE real, amortización anticipada, alquilar frente a
+          comprar, rentabilidad y valoración de mercado. Una vivienda, todos los números.
+        </p>
+        <ul class="hero-tags">
+          <li data-i18n="hero.tag1">19 sistemas fiscales</li>
+          <li data-i18n="hero.tag2">Fija, variable y mixta</li>
+          <li data-i18n="hero.tag3">3 idiomas</li>
+          <li data-i18n="hero.tag4">Análisis guardados</li>
+        </ul>
+      </section>
+
+      <!-- Workspace -->
+      <section class="workspace" id="calculadora">
+        <aside class="panel inputs" aria-labelledby="inputs-title">
+          <div class="panel-head">
+            <div>
+              <p class="panel-eyebrow" data-i18n="property.eyebrow">Ficha de la operación</p>
+              <h2 id="inputs-title" data-i18n="property.title">Tu vivienda</h2>
+            </div>
+            <button class="link-btn" type="button" id="reset" data-i18n="common.reset">Reiniciar</button>
+          </div>
+
+          <div class="field">
+            <label for="label" data-i18n="property.name">Nombre del análisis</label>
+            <input id="label" data-bind="label" maxlength="60" data-i18n-placeholder="property.namePh" placeholder="Piso en Chamberí" />
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="price" data-i18n="property.price">Precio de venta</label>
+              <div class="suffix-input">
+                <input id="price" data-bind="price" data-money inputmode="numeric" autocomplete="off" value="420.000" />
+                <span aria-hidden="true">€</span>
+              </div>
+            </div>
+            <div class="field">
+              <label for="m2" data-i18n="property.m2">Superficie</label>
+              <div class="suffix-input">
+                <input id="m2" data-bind="m2" type="number" min="1" max="2000" step="1" value="90" />
+                <span aria-hidden="true">m²</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="regionId" data-i18n="property.region">Comunidad autónoma</label>
+            <div class="select-wrap">
+              <select id="regionId" data-bind="regionId"></select>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="conditionId" data-i18n="property.condition">Estado</label>
+            <div class="select-wrap">
+              <select id="conditionId" data-bind="conditionId">
+                <option value="reform" data-i18n="condition.reform">Para reformar</option>
+                <option value="regular" data-i18n="condition.regular">Para actualizar</option>
+                <option value="good" data-i18n="condition.good" selected>Buen estado</option>
+                <option value="new" data-i18n="condition.new">A estrenar</option>
+              </select>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+            </div>
+          </div>
+
+          <div class="field">
+            <span class="label" data-i18n="property.type">Tipo de vivienda</span>
+            <div class="segmented" role="radiogroup" data-i18n-aria-label="property.type">
+              <label><input type="radio" name="propertyType" value="usada" checked /><span data-i18n="property.usada">Segunda mano</span></label>
+              <label><input type="radio" name="propertyType" value="nueva" /><span data-i18n="property.nueva">Obra nueva</span></label>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="marketRef" data-i18n="property.marketRef">Referencia de mercado</label>
+            <div class="suffix-input">
+              <input id="marketRef" data-bind="marketRef" type="number" min="0" max="30000" step="10" />
+              <span>€/m²</span>
+            </div>
+            <p class="hint" id="market-hint"></p>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="downPct" data-i18n="property.down">Entrada</label>
+              <div class="suffix-input">
+                <input id="downPct" data-bind="downPct" type="number" min="0" max="100" step="1" value="20" />
+                <span>%</span>
+              </div>
+            </div>
+            <div class="field">
+              <label for="years" data-i18n="property.years">Plazo</label>
+              <div class="suffix-input">
+                <input id="years" data-bind="years" type="number" min="1" max="40" step="1" value="30" />
+                <span data-i18n="common.yearsShort">años</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <span class="label" data-i18n="property.mortgageType">Tipo de hipoteca</span>
+            <div class="segmented segmented-3" role="radiogroup" data-i18n-aria-label="property.mortgageType">
+              <label><input type="radio" name="mortgageType" value="fixed" checked /><span data-i18n="mortgage.fixed">Fija</span></label>
+              <label><input type="radio" name="mortgageType" value="variable" /><span data-i18n="mortgage.variable">Variable</span></label>
+              <label><input type="radio" name="mortgageType" value="mixed" /><span data-i18n="mortgage.mixed">Mixta</span></label>
+            </div>
+          </div>
+
+          <div class="rate-group" data-rate="fixed">
+            <div class="field">
+              <label for="tin" data-i18n="mortgage.tin">TIN fijo</label>
+              <div class="suffix-input">
+                <input id="tin" data-bind="tin" type="number" min="0" max="20" step="0.05" value="3.2" />
+                <span>%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="rate-group" data-rate="variable" hidden>
+            <div class="field-row">
+              <div class="field">
+                <label for="euribor" data-i18n="mortgage.euribor">Euríbor 12M</label>
+                <div class="suffix-input">
+                  <input id="euribor" data-bind="euribor" type="number" min="0" max="15" step="0.01" value="3.3" />
+                  <span>%</span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="spread" data-i18n="mortgage.spread">Diferencial</label>
+                <div class="suffix-input">
+                  <input id="spread" data-bind="spread" type="number" min="0" max="5" step="0.05" value="0.99" />
+                  <span>%</span>
+                </div>
+              </div>
+            </div>
+            <p class="hint" id="euribor-hint"></p>
+          </div>
+
+          <div class="rate-group" data-rate="mixed" hidden>
+            <div class="field-row">
+              <div class="field">
+                <label for="tinMixed" data-i18n="mortgage.tinFixed">TIN del tramo fijo</label>
+                <div class="suffix-input">
+                  <input id="tinMixed" data-bind="tin" type="number" min="0" max="20" step="0.05" value="3.2" />
+                  <span>%</span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="fixedYears" data-i18n="mortgage.fixedYears">Años fijos</label>
+                <div class="suffix-input">
+                  <input id="fixedYears" data-bind="fixedYears" type="number" min="1" max="29" step="1" value="5" />
+                  <span data-i18n="common.yearsShort">años</span>
+                </div>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="euriborMixed" data-i18n="mortgage.euribor">Euríbor 12M</label>
+                <div class="suffix-input">
+                  <input id="euriborMixed" data-bind="euribor" type="number" min="0" max="15" step="0.01" value="3.3" />
+                  <span>%</span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="spreadMixed" data-i18n="mortgage.spread">Diferencial</label>
+                <div class="suffix-input">
+                  <input id="spreadMixed" data-bind="spread" type="number" min="0" max="5" step="0.05" value="0.99" />
+                  <span>%</span>
+                </div>
+              </div>
+            </div>
+            <p class="hint" id="mixed-hint"></p>
+          </div>
+
+          <details class="adv">
+            <summary data-i18n="property.expenses">Gastos de la compra</summary>
+            <div class="field-row">
+              <div class="field">
+                <label for="agencyPct" data-i18n="adv.agency">Inmobiliaria</label>
+                <div class="suffix-input">
+                  <input id="agencyPct" data-bind="agencyPct" type="number" min="0" max="15" step="0.5" value="0" />
+                  <span>%</span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="openingFeePct" data-i18n="adv.opening">Apertura hipoteca</label>
+                <div class="suffix-input">
+                  <input id="openingFeePct" data-bind="openingFeePct" type="number" min="0" max="5" step="0.1" value="0" />
+                  <span>%</span>
+                </div>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="reformPerM2" data-i18n="adv.reformPerM2">Reforma</label>
+                <div class="suffix-input">
+                  <input id="reformPerM2" data-bind="reformPerM2" type="number" min="0" max="3000" step="25" data-i18n-placeholder="adv.auto" placeholder="Auto" />
+                  <span>€/m²</span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="furniture" data-i18n="adv.furniture">Muebles y extras</label>
+                <div class="suffix-input">
+                  <input id="furniture" data-bind="furniture" type="number" min="0" step="500" value="0" />
+                  <span>€</span>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details class="adv">
+            <summary data-i18n="property.rental">Alquiler y gastos anuales</summary>
+            <div class="field-row">
+              <div class="field">
+                <label for="rent" data-i18n="adv.rent">Alquiler mensual</label>
+                <div class="suffix-input">
+                  <input id="rent" data-bind="rent" type="number" min="0" step="50" value="1800" />
+                  <span>€</span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="vacancyPct" data-i18n="adv.vacancy">Vacancia</label>
+                <div class="suffix-input">
+                  <input id="vacancyPct" data-bind="vacancyPct" type="number" min="0" max="100" step="1" value="5" />
+                  <span>%</span>
+                </div>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="opexYear" data-i18n="adv.opex">IBI, comunidad, seguro y mantenimiento</label>
+                <div class="suffix-input">
+                  <input id="opexYear" data-bind="opexYear" type="number" min="0" step="100" value="1800" />
+                  <span>€/año</span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="managementPct" data-i18n="adv.management">Gestión</label>
+                <div class="suffix-input">
+                  <input id="managementPct" data-bind="managementPct" type="number" min="0" max="30" step="1" value="0" />
+                  <span>%</span>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details class="adv">
+            <summary data-i18n="property.assumptions">Supuestos y horizonte</summary>
+            <div class="field-row">
+              <div class="field">
+                <label for="income" data-i18n="adv.income">Ingresos netos del hogar</label>
+                <div class="suffix-input">
+                  <input id="income" data-bind="income" type="number" min="0" step="100" value="5200" />
+                  <span>€/mes</span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="otherDebts" data-i18n="adv.debts">Otras deudas</label>
+                <div class="suffix-input">
+                  <input id="otherDebts" data-bind="otherDebts" type="number" min="0" step="50" value="200" />
+                  <span>€/mes</span>
+                </div>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="appreciationPct" data-i18n="adv.appreciation">Revalorización anual</label>
+                <div class="suffix-input">
+                  <input id="appreciationPct" data-bind="appreciationPct" type="number" min="-10" max="15" step="0.1" value="2.5" />
+                  <span>%</span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="rentGrowthPct" data-i18n="adv.rentGrowth">Subida del alquiler</label>
+                <div class="suffix-input">
+                  <input id="rentGrowthPct" data-bind="rentGrowthPct" type="number" min="-5" max="15" step="0.1" value="2" />
+                  <span>%</span>
+                </div>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="altReturnPct" data-i18n="adv.altReturn">Rentabilidad alternativa</label>
+                <div class="suffix-input">
+                  <input id="altReturnPct" data-bind="altReturnPct" type="number" min="0" max="15" step="0.1" value="4" />
+                  <span>%</span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="horizon" data-i18n="adv.horizon">Horizonte</label>
+                <div class="suffix-input">
+                  <input id="horizon" data-bind="horizon" type="number" min="1" max="40" step="1" value="10" />
+                  <span data-i18n="common.yearsShort">años</span>
+                </div>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="sellingCostPct" data-i18n="adv.sellingCost">Coste de venta</label>
+                <div class="suffix-input">
+                  <input id="sellingCostPct" data-bind="sellingCostPct" type="number" min="0" max="10" step="0.5" value="3" />
+                  <span>%</span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="taxRatePct" data-i18n="adv.taxRate">Tipo fiscal alquiler</label>
+                <div class="suffix-input">
+                  <input id="taxRatePct" data-bind="taxRatePct" type="number" min="0" max="60" step="1" value="24" />
+                  <span>%</span>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <p class="privacy-note">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>
+            <span data-i18n="property.privacy">Los cálculos se hacen en tu navegador. Nada se envía hasta que tú guardas un análisis.</span>
+          </p>
+        </aside>
+
+        <div class="panel results">
+          <div class="kpis">
+            <article class="kpi kpi-main">
+              <p class="kpi-label" data-i18n="kpi.cash">Efectivo necesario</p>
+              <p class="kpi-value" id="kpi-cash">—</p>
+              <p class="kpi-foot" id="kpi-cash-foot"></p>
+            </article>
+            <article class="kpi">
+              <p class="kpi-label" data-i18n="kpi.cost">Coste total</p>
+              <p class="kpi-value" id="kpi-cost">—</p>
+              <p class="kpi-foot" id="kpi-cost-foot"></p>
+            </article>
+            <article class="kpi">
+              <p class="kpi-label" data-i18n="kpi.payment">Cuota estimada</p>
+              <p class="kpi-value" id="kpi-payment">—</p>
+              <p class="kpi-foot" id="kpi-payment-foot"></p>
+            </article>
+            <article class="kpi">
+              <p class="kpi-label" data-i18n="kpi.market">Precio vs mercado</p>
+              <p class="kpi-value" id="kpi-market">—</p>
+              <p class="kpi-foot" id="kpi-market-foot"></p>
+            </article>
+          </div>
+
+          <div class="result-actions">
+            <button type="button" class="btn btn-primary btn-sm" id="save">
+              <span data-i18n="actions.save">Guardar análisis</span>
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" id="copy">
+              <span data-i18n="actions.copy">Copiar resumen</span>
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" id="print">
+              <span data-i18n="actions.print">Informe PDF</span>
+            </button>
+          </div>
+
+          <div class="tabs" role="tablist">
+            <button role="tab" id="tab-buy" aria-controls="panel-buy" aria-selected="true" data-tab="buy">
+              <span data-i18n="tabs.buy">Compra</span>
+            </button>
+            <button role="tab" id="tab-mortgage" aria-controls="panel-mortgage" aria-selected="false" data-tab="mortgage">
+              <span data-i18n="tabs.mortgage">Hipoteca</span>
+            </button>
+            <button role="tab" id="tab-rent" aria-controls="panel-rent" aria-selected="false" data-tab="rent">
+              <span data-i18n="tabs.rent">Alquilar o comprar</span>
+            </button>
+            <button role="tab" id="tab-invest" aria-controls="panel-invest" aria-selected="false" data-tab="invest">
+              <span data-i18n="tabs.invest">Inversión</span>
+            </button>
+          </div>
+
+          <!-- Compra -->
+          <section class="tab-panel" id="panel-buy" role="tabpanel" aria-labelledby="tab-buy">
+            <div class="grid-2">
+              <article class="card">
+                <div class="card-head">
+                  <h3 data-i18n="buy.title">Qué pagas y cuándo</h3>
+                  <span class="tag" id="buy-region"></span>
+                </div>
+                <div class="rows" id="buy-rows"></div>
+                <div class="totals" id="buy-totals"></div>
+              </article>
+              <article class="card">
+                <div class="card-head">
+                  <h3 data-i18n="buy.marketTitle">Valoración de mercado</h3>
+                  <span class="tag" id="market-tag"></span>
+                </div>
+                <div id="market-box"></div>
+                <div id="buy-donut" class="donut-wrap"></div>
+              </article>
+            </div>
+            <article class="card">
+              <div class="card-head">
+                <h3 data-i18n="buy.tco">Coste real de propiedad</h3>
+                <span class="tag" id="tco-tag"></span>
+              </div>
+              <div class="stat-grid" id="tco-grid"></div>
+            </article>
+          </section>
+
+          <!-- Hipoteca -->
+          <section class="tab-panel" id="panel-mortgage" role="tabpanel" aria-labelledby="tab-mortgage" hidden>
+            <div class="grid-2">
+              <article class="card">
+                <div class="card-head">
+                  <h3 data-i18n="mortgage.summary">Tu préstamo</h3>
+                  <span class="tag" id="mortgage-tag"></span>
+                </div>
+                <div class="stat-grid" id="mortgage-stats"></div>
+                <div class="divider"></div>
+                <h4 class="mini-title" data-i18n="mortgage.early">Amortización anticipada</h4>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="extraMonthly" data-i18n="adv.extraMonthly">Extra cada mes</label>
+                    <div class="suffix-input">
+                      <input id="extraMonthly" data-bind="extraMonthly" type="number" min="0" step="25" value="0" />
+                      <span>€</span>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="lumpAmount" data-i18n="adv.lump">Aportación puntual</label>
+                    <div class="suffix-input">
+                      <input id="lumpAmount" data-bind="lumpAmount" type="number" min="0" step="1000" value="0" />
+                      <span>€</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="lumpYear" data-i18n="adv.lumpYear">¿En qué año?</label>
+                  <div class="suffix-input">
+                    <input id="lumpYear" data-bind="lumpYear" type="number" min="1" max="40" step="1" value="5" />
+                    <span data-i18n="common.yearsShort">años</span>
+                  </div>
+                </div>
+                <p class="hint" id="early-hint"></p>
+              </article>
+              <article class="card">
+                <div class="card-head">
+                  <h3 data-i18n="mortgage.stressTitle">Test de estrés y DTI</h3>
+                </div>
+                <div id="stress-box"></div>
+                <div class="divider"></div>
+                <h4 class="mini-title" data-i18n="mortgage.sensitivity">Cuota según tipo y plazo</h4>
+                <div class="table-wrap"><table class="data-table" id="sensitivity-table"></table></div>
+                <p class="hint" id="sensitivity-hint"></p>
+              </article>
+            </div>
+            <article class="card">
+              <div class="card-head">
+                <h3 data-i18n="mortgage.schedule">Cuadro de amortización</h3>
+                <span class="tag" id="schedule-tag"></span>
+              </div>
+              <div class="amort-chart" id="amort-chart" aria-hidden="true"></div>
+              <div class="legend-line" id="amort-legend"></div>
+              <div class="table-wrap"><table class="data-table" id="amort-table"></table></div>
+            </article>
+          </section>
+
+          <!-- Alquilar vs comprar -->
+          <section class="tab-panel" id="panel-rent" role="tabpanel" aria-labelledby="tab-rent" hidden>
+            <article class="card">
+              <div class="card-head">
+                <h3 data-i18n="rent.title">Patrimonio a lo largo del tiempo</h3>
+                <span class="tag" id="rent-tag"></span>
+              </div>
+              <p class="lead" id="rent-verdict"></p>
+              <div class="line-chart" id="rent-chart" role="img" aria-label="Comparación de patrimonio"></div>
+              <div class="legend-line" id="rent-legend"></div>
+            </article>
+            <div class="grid-2">
+              <article class="card">
+                <h3 data-i18n="rent.result">Resultado en el horizonte</h3>
+                <div class="stat-grid" id="rent-stats"></div>
+              </article>
+              <article class="card">
+                <h3 data-i18n="rent.assumptions">Supuestos del modelo</h3>
+                <div class="rows" id="rent-assumptions"></div>
+                <p class="hint" data-i18n="rent.note">
+                  El inquilino invierte la entrada y la diferencia mensual a la rentabilidad
+                  alternativa. No incluye deducciones fiscales ni cambios de tipo en variables.
+                </p>
+              </article>
+            </div>
+          </section>
+
+          <!-- Inversión -->
+          <section class="tab-panel" id="panel-invest" role="tabpanel" aria-labelledby="tab-invest" hidden>
+            <div class="grid-2">
+              <article class="card">
+                <div class="card-head">
+                  <h3 data-i18n="invest.returns">Rentabilidad</h3>
+                  <span class="tag" id="invest-tag"></span>
+                </div>
+                <div class="stat-grid" id="invest-stats"></div>
+              </article>
+              <article class="card">
+                <h3 data-i18n="invest.cashflow">Flujo de caja anual</h3>
+                <div id="invest-bars"></div>
+                <div id="invest-note" class="hint"></div>
+              </article>
+            </div>
+            <article class="card">
+              <div class="card-head">
+                <h3 data-i18n="invest.ten">Los primeros 10 años</h3>
+                <span class="tag" id="invest-ten-tag"></span>
+              </div>
+              <div class="table-wrap"><table class="data-table" id="invest-table"></table></div>
+              <p class="hint" data-i18n="invest.note">
+                Impuestos estimados sobre el rendimiento neto menos intereses, al tipo fiscal que
+                hayas indicado. Es una aproximación, no asesoramiento fiscal.
+              </p>
+            </article>
+          </section>
+
+          <p class="disclaimer" id="disclaimer"></p>
+        </div>
+      </section>
+
+      <!-- Datos -->
+      <section class="section" id="datos">
+        <header class="section-head">
+          <p class="eyebrow" data-i18n="data.eyebrow">02 — Datos abiertos</p>
+          <h2 data-i18n="data.title">Los números, con fuente y fecha.</h2>
+          <p class="lead" data-i18n="data.sub">
+            Tipos generales de ITP por tramos, AJD, IGIC/IPSI y precios medios de oferta. Puedes
+            editar cualquier supuesto en el análisis: los datos son el punto de partida, no la
+            verdad absoluta.
+          </p>
+        </header>
+
+        <div class="data-block">
+          <div class="card-head">
+            <h3 data-i18n="data.taxTitle">Fiscalidad por comunidad</h3>
+            <span class="tag" data-i18n="data.reviewed">Revisado 22/11/2026</span>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table" id="tax-table"></table>
+          </div>
+          <p class="hint" data-i18n="data.taxNote">
+            ITP calculado por tramos marginales cuando la comunidad aplica escala. Existen tipos
+            reducidos por edad, vivienda habitual, familia numerosa o discapacidad: confirma tu caso
+            en la agencia tributaria autonómica.
+          </p>
+        </div>
+
+        <div class="data-block">
+          <div class="card-head">
+            <h3 data-i18n="data.marketTitle">Precio medio de oferta</h3>
+            <span class="tag">€/m²</span>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table" id="market-table"></table>
+          </div>
+          <p class="hint" data-i18n="data.marketNote">
+            Precio de oferta de idealista (no precio de escritura). Cada comunidad tiene su propia
+            fecha de publicación, indicada en la tabla.
+          </p>
+        </div>
+
+        <div class="grid-2">
+          <article class="card">
+            <h3 data-i18n="data.sources">Fuentes</h3>
+            <ul class="source-list" id="sources"></ul>
+          </article>
+          <article class="card">
+            <h3 data-i18n="method.title">Cómo se calcula</h3>
+            <div class="method" id="method"></div>
+          </article>
+        </div>
+
+        <p class="disclaimer" data-i18n="data.disclaimer">
+          Herramienta orientativa. No es una oferta de préstamo, una tasación oficial ni
+          asesoramiento fiscal o financiero. Los tipos y precios cambian: verifica siempre antes de
+          firmar.
+        </p>
+      </section>
+
+      <!-- Cuenta -->
+      <section class="section section-account" id="cuenta">
+        <header class="section-head">
+          <p class="eyebrow" data-i18n="account.eyebrow">03 — Tu cuenta</p>
+          <h2 data-i18n="account.title">Guarda, compara y vuelve.</h2>
+          <p class="lead" data-i18n="account.sub">
+            Tus análisis se guardan en este navegador. Si entras con Freebuff, también se sincronizan
+            en la nube y los tienes en cualquier dispositivo.
+          </p>
+        </header>
+
+        <div class="account-grid">
+          <article class="card auth-card" id="auth-box"></article>
+          <article class="card">
+            <div class="card-head">
+              <h3 data-i18n="account.saved">Análisis guardados</h3>
+              <span class="tag" id="reports-count">0</span>
+            </div>
+            <div id="reports-list" class="reports"></div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="shell footer-grid">
+        <div>
+          <a class="brand brand-footer" href="#top">
+            <span class="brand-mark" aria-hidden="true">€</span>
+            <span class="brand-name">Cuentas<em>Claras</em></span>
+            <span class="brand-badge">PRO</span>
+          </a>
+          <p class="footer-text" data-i18n="footer.tagline">
+            Análisis profesional de compra, hipoteca e inversión inmobiliaria. Sin anuncios, sin
+            venta de datos y con las fuentes a la vista.
+          </p>
+        </div>
+        <nav aria-label="Herramientas">
+          <p class="footer-title" data-i18n="footer.tools">Herramientas</p>
+          <a href="#calculadora" data-i18n="tabs.buy">Compra</a>
+          <a href="#calculadora" data-i18n="tabs.mortgage">Hipoteca</a>
+          <a href="#calculadora" data-i18n="tabs.rent">Alquilar o comprar</a>
+          <a href="#calculadora" data-i18n="tabs.invest">Inversión</a>
+        </nav>
+        <nav aria-label="Recursos">
+          <p class="footer-title" data-i18n="footer.resources">Recursos</p>
+          <a href="#datos" data-i18n="nav.data">Datos y fuentes</a>
+          <a href="#cuenta" data-i18n="nav.account">Mi cuenta</a>
+          <a href="#datos" data-i18n="method.title">Cómo se calcula</a>
+        </nav>
+      </div>
+      <div class="shell footer-legal">
+        <p data-i18n="footer.legal">
+          © 2026 Cuentas Claras Pro. Datos orientativos; no constituye asesoramiento financiero,
+          fiscal ni una tasación oficial.
+        </p>
+        <p class="muted" data-i18n="footer.privacy">Sin cookies de seguimiento · Cálculo local · Datos con fuente</p>
+      </div>
+    </footer>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>
