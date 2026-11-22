@@ -2,13 +2,49 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { REGION_BY_ID } from '../js/data.js';
-import { annuity, amortization, computeState, itpFor, tae } from '../js/engine.js';
+import { annuity, amortization, computeState, itpFor, maxPrice, tae } from '../js/engine.js';
 
 const near = (actual, expected, tolerance = 1) =>
   assert.ok(
     Math.abs(actual - expected) <= tolerance,
     `esperado ${expected} ±${tolerance}, recibido ${actual}`,
   );
+
+test('maxPrice agota el ahorro y respeta el 35 % de ingresos', () => {
+  const base = {
+    regionId: 'madrid',
+    propertyType: 'usada',
+    conditionId: 'good',
+    m2: 90,
+    downPct: 20,
+    years: 30,
+    mortgageType: 'fixed',
+    tin: 3.2,
+    income: 5000,
+    otherDebts: 100,
+    savings: 80000,
+    furniture: 0,
+  };
+  const budget = maxPrice(base);
+  assert.ok(budget.price > 0, 'debe haber presupuesto con ahorro e ingresos');
+  const at = computeState({ ...base, price: budget.price });
+  assert.ok(at.cash <= 80000 + 1, `efectivo ${at.cash} no debe pasar del ahorro`);
+  assert.ok(at.cash >= 80000 - 2000, 'el presupuesto debe agotar el ahorro si ese es el límite');
+  assert.ok(at.dti <= 0.35 + 0.002, `DTI ${at.dti} por encima del 35 %`);
+});
+
+test('sin ingresos ni ahorros no hay presupuesto', () => {
+  const budget = maxPrice({ income: 0, savings: 0, otherDebts: 0 });
+  assert.equal(budget.price, 0);
+  assert.equal(budget.payment, 0);
+});
+
+test('más ahorro solo puede subir el precio máximo', () => {
+  const low = maxPrice({ savings: 30000, income: 3000 });
+  const high = maxPrice({ savings: 90000, income: 3000 });
+  assert.ok(high.price >= low.price);
+  assert.equal(low.limitedBy, 'cash');
+});
 
 test('ITP Madrid: 6 % plano', () => {
   near(itpFor(REGION_BY_ID.madrid, 400000), 24000);

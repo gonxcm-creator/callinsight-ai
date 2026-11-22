@@ -14,6 +14,7 @@ export function money(value, locale = 'es', decimals = 0) {
     currency: 'EUR',
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
+    useGrouping: 'always',
   }).format(n);
 }
 
@@ -31,6 +32,7 @@ export function number(value, locale = 'es', decimals = 0) {
   return nf(locale, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
+    useGrouping: 'always',
   }).format(n);
 }
 

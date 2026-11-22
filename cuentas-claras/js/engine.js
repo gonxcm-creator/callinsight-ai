@@ -114,6 +114,35 @@ export function tae(principal, payment, months, openingFee = 0) {
   return (Math.pow(1 + monthly, 12) - 1) * 100;
 }
 
+/**
+ * Impuestos y gastos de una compra para un precio dado. Se usa en computeState y en
+ * maxPrice para que el presupuesto y el desglose nunca discrepen.
+ */
+function buyCosts({ price, loan, region, newBuild, agencyPct, openingFeePct }) {
+  const taxes = newBuild
+    ? { itp: 0, iva: price * region.iva, ajd: price * region.ajd, total: 0 }
+    : { itp: itpFor(region, price), iva: 0, ajd: 0, total: 0 };
+  taxes.total = taxes.itp + taxes.iva + taxes.ajd;
+
+  const notary = price ? clamp(600 + price * 0.0008, 650, 1800) : 0;
+  const registry = price ? clamp(380 + price * 0.0005, 420, 1200) : 0;
+  const gestoria = price ? 500 : 0;
+  const appraisal = loan > 0 ? 450 : 0;
+  const agency = (price * clamp(num(agencyPct), 0, 15)) / 100;
+  const opening = (loan * clamp(num(openingFeePct), 0, 5)) / 100;
+
+  return {
+    taxes,
+    notary,
+    registry,
+    gestoria,
+    appraisal,
+    agency,
+    opening,
+    closing: taxes.total + notary + registry + gestoria + appraisal + agency + opening,
+  };
+}
+
 function rateFor(state) {
   if (state.mortgageType === 'variable') {
     return clamp(num(state.euribor) + num(state.spread), 0, 20);
@@ -134,17 +163,14 @@ export function computeState(partial = {}) {
   const years = clamp(Math.round(num(state.years, 30)), 1, 40);
   const newBuild = state.propertyType === 'nueva';
 
-  const taxes = newBuild
-    ? { itp: 0, iva: price * region.iva, ajd: price * region.ajd, total: 0 }
-    : { itp: itpFor(region, price), iva: 0, ajd: 0, total: 0 };
-  taxes.total = taxes.itp + taxes.iva + taxes.ajd;
-
-  const notary = price ? clamp(600 + price * 0.0008, 650, 1800) : 0;
-  const registry = price ? clamp(380 + price * 0.0005, 420, 1200) : 0;
-  const gestoria = price ? 500 : 0;
-  const appraisal = loan > 0 ? 450 : 0;
-  const agency = (price * clamp(num(state.agencyPct), 0, 15)) / 100;
-  const opening = (loan * clamp(num(state.openingFeePct), 0, 5)) / 100;
+  const { taxes, notary, registry, gestoria, appraisal, agency, opening, closing } = buyCosts({
+    price,
+    loan,
+    region,
+    newBuild,
+    agencyPct: state.agencyPct,
+    openingFeePct: state.openingFeePct,
+  });
 
   const reformPerM2 =
     state.reformPerM2 === null || state.reformPerM2 === undefined
@@ -153,7 +179,6 @@ export function computeState(partial = {}) {
   const reform = reformPerM2 * m2;
   const furniture = Math.max(0, num(state.furniture));
 
-  const closing = taxes.total + notary + registry + gestoria + appraisal + agency + opening;
   const cash = down + closing + reform + furniture;
   const totalCost = price + closing + reform + furniture;
 
@@ -311,5 +336,86 @@ export function computeState(partial = {}) {
     },
     sensitivity: { rates: sensitivityRates, terms: sensitivityTerms, rows: sensitivity },
     horizon,
+  };
+}
+
+/**
+ * Precio máximo alcanzable con los ingresos y los ahorros del análisis.
+ * Tope 1 (cuota): la mensualidad no pasa del 35 % de los ingresos netos menos otras deudas.
+ * Tope 2 (ahorro): los ahorros cubren entrada + gastos de compra + reforma + muebles.
+ * Usa el mismo cálculo de gastos que computeState para que nunca discrepen.
+ */
+export function maxPrice(partial = {}) {
+  const state = resolveState(partial);
+  const region = REGION_BY_ID[state.regionId] || REGION_BY_ID.madrid;
+  const condition = CONDITION_BY_ID[state.conditionId] || CONDITION_BY_ID.good;
+  const newBuild = state.propertyType === 'nueva';
+  const downPct = clamp(num(state.downPct, 20), 0, 100);
+  const years = clamp(Math.round(num(state.years, 30)), 1, 40);
+  const rate = rateFor(state);
+  const savings = Math.max(0, num(state.savings));
+  const income = Math.max(0, num(state.income));
+  const otherDebts = Math.max(0, num(state.otherDebts));
+  const maxMonthly = Math.max(0, income * 0.35 - otherDebts);
+
+  const reformPerM2 =
+    state.reformPerM2 === null || state.reformPerM2 === undefined
+      ? condition.reformPerM2
+      : Math.max(0, num(state.reformPerM2));
+  const extras =
+    reformPerM2 * Math.max(1, num(state.m2, 1)) + Math.max(0, num(state.furniture));
+
+  const monthlyRate = Math.max(0, rate) / 100 / 12;
+  const months = years * 12;
+  const loanMax =
+    maxMonthly <= 0
+      ? 0
+      : monthlyRate === 0
+        ? maxMonthly * months
+        : (maxMonthly * (1 - Math.pow(1 + monthlyRate, -months))) / monthlyRate;
+
+  const cashFor = (price) => {
+    const down = (price * downPct) / 100;
+    const loan = Math.max(0, price - down);
+    const costs = buyCosts({
+      price,
+      loan,
+      region,
+      newBuild,
+      agencyPct: state.agencyPct,
+      openingFeePct: state.openingFeePct,
+    });
+    return down + costs.closing + extras;
+  };
+
+  let byCash = 0;
+  if (savings > 0) {
+    let low = 0;
+    let high = savings * 20 + 100000;
+    for (let i = 0; i < 60; i += 1) {
+      const mid = (low + high) / 2;
+      if (cashFor(mid) > savings) high = mid;
+      else low = mid;
+    }
+    byCash = Math.max(0, Math.floor(low));
+  }
+
+  const byLoan = downPct >= 100 ? byCash : loanMax / (1 - downPct / 100);
+  const price = Math.max(0, Math.min(byCash, byLoan));
+  const down = (price * downPct) / 100;
+  const loan = Math.max(0, price - down);
+
+  return {
+    price,
+    down,
+    loan,
+    payment: loan > 0 ? annuity(loan, rate, years) : 0,
+    cash: price > 0 ? cashFor(price) : 0,
+    maxMonthly,
+    loanMax,
+    byCash,
+    byLoan,
+    limitedBy: byCash <= byLoan ? 'cash' : 'loan',
+    dtiLimit: 0.35,
   };
 }

@@ -32,6 +32,7 @@
 
         <nav class="main-nav" aria-label="Principal">
           <a href="#calculadora" data-i18n="nav.tools">Herramientas</a>
+          <a href="#zonas" data-i18n="nav.zones">Zonas y viviendas</a>
           <a href="#datos" data-i18n="nav.data">Datos y fuentes</a>
           <a href="#cuenta" data-i18n="nav.account">Mi cuenta</a>
         </nav>
@@ -79,6 +80,7 @@
           <li data-i18n="hero.tag3">3 idiomas</li>
           <li data-i18n="hero.tag4">Análisis guardados</li>
         </ul>
+        <div class="hero-data" id="hero-data"></div>
       </section>
 
       <!-- Workspace -->
@@ -320,6 +322,13 @@
 
           <details class="adv">
             <summary data-i18n="property.assumptions">Supuestos y horizonte</summary>
+            <div class="field">
+              <label for="savings" data-i18n="adv.savings">Ahorros disponibles</label>
+              <div class="suffix-input">
+                <input id="savings" data-bind="savings" type="number" min="0" step="1000" value="120000" />
+                <span>€</span>
+              </div>
+            </div>
             <div class="field-row">
               <div class="field">
                 <label for="income" data-i18n="adv.income">Ingresos netos del hogar</label>
@@ -428,6 +437,17 @@
             </button>
           </div>
 
+          <article class="card diag" aria-labelledby="diag-title">
+            <div class="card-head">
+              <h3 id="diag-title" data-i18n="diag.title">Diagnóstico</h3>
+              <span class="tag" id="diag-score"></span>
+            </div>
+            <ul class="diag-list" id="diag-list"></ul>
+            <p class="hint" data-i18n="diag.foot">
+              Estimación automática con tus datos. No es asesoramiento financiero.
+            </p>
+          </article>
+
           <div class="tabs" role="tablist">
             <button role="tab" id="tab-buy" aria-controls="panel-buy" aria-selected="true" data-tab="buy">
               <span data-i18n="tabs.buy">Compra</span>
@@ -521,6 +541,17 @@
             </div>
             <article class="card">
               <div class="card-head">
+                <h3 data-i18n="compare.title">Fija, variable o mixta</h3>
+                <span class="tag" id="compare-tag"></span>
+              </div>
+              <div class="table-wrap"><table class="data-table" id="compare-table"></table></div>
+              <p class="hint" data-i18n="compare.note">
+                Misma entrada y mismo plazo para las tres. La mixta se muestra con la cuota de
+                su tramo fijo; la variable, con el Euríbor de hoy.
+              </p>
+            </article>
+            <article class="card">
+              <div class="card-head">
                 <h3 data-i18n="mortgage.schedule">Cuadro de amortización</h3>
                 <span class="tag" id="schedule-tag"></span>
               </div>
@@ -587,6 +618,70 @@
           </section>
 
           <p class="disclaimer" id="disclaimer"></p>
+        </div>
+      </section>
+
+      <!-- Zonas y viviendas -->
+      <section class="section section-zones" id="zonas">
+        <header class="section-head reveal">
+          <p class="eyebrow" data-i18n="zones.eyebrow">02 — Dónde comprar</p>
+          <h2 data-i18n="zones.title">Tu presupuesto, con barrios.</h2>
+          <p class="lead" id="zones-sub"></p>
+        </header>
+
+        <article class="budget reveal" aria-labelledby="budget-title">
+          <div class="budget-main">
+            <p class="panel-eyebrow" id="budget-title" data-i18n="zones.budgetTitle">
+              Tu presupuesto máximo
+            </p>
+            <p class="budget-label" id="budget-label"></p>
+            <p class="budget-value" id="budget-value">—</p>
+            <p class="budget-foot" id="budget-foot"></p>
+          </div>
+          <div class="budget-bars" id="budget-bars"></div>
+        </article>
+
+        <div class="zones-toolbar reveal">
+          <p class="zones-count" id="zones-count"></p>
+          <div class="chips" role="group" data-i18n-aria-label="zones.sortLabel" id="zones-sort">
+            <span class="chips-label" data-i18n="zones.sortLabel">Ordenar</span>
+            <button type="button" class="chip is-active" data-sort="price" aria-pressed="true" data-i18n="zones.sortPrice">
+              Más baratas
+            </button>
+            <button type="button" class="chip" data-sort="fit" aria-pressed="false" data-i18n="zones.sortFit">
+              Mejor encaje
+            </button>
+          </div>
+        </div>
+
+        <div class="zone-grid" id="zone-grid"></div>
+
+        <p class="hint zones-note" id="zones-note"></p>
+
+        <div class="grid-2">
+          <article class="card reveal">
+            <div class="card-head">
+              <h3 data-i18n="zones.whyTitle">Viviendas reales, en el portal</h3>
+              <span class="tag">Fotocasa · pisos.com</span>
+            </div>
+            <p class="lead" data-i18n="zones.whyBody"></p>
+            <ul class="portal-list" id="portal-list"></ul>
+            <p class="hint" data-i18n="zones.disclaimer"></p>
+          </article>
+          <article class="card reveal">
+            <div class="card-head">
+              <h3 data-i18n="checklist.title">Antes de firmar</h3>
+            </div>
+            <p class="hint" data-i18n="checklist.sub"></p>
+            <ol class="checklist">
+              <li data-i18n="checklist.1"></li>
+              <li data-i18n="checklist.2"></li>
+              <li data-i18n="checklist.3"></li>
+              <li data-i18n="checklist.4"></li>
+              <li data-i18n="checklist.5"></li>
+              <li data-i18n="checklist.6"></li>
+            </ol>
+          </article>
         </div>
       </section>
 
@@ -673,6 +768,24 @@
       </section>
     </main>
 
+    <div class="summary-bar" id="summary-bar" role="region" aria-label="Resumen del análisis" aria-hidden="true">
+      <div class="shell summary-inner">
+        <div class="summary-item">
+          <span data-i18n="kpi.cash">Efectivo necesario</span>
+          <b id="sum-cash">—</b>
+        </div>
+        <div class="summary-item">
+          <span data-i18n="kpi.payment">Cuota estimada</span>
+          <b id="sum-payment">—</b>
+        </div>
+        <div class="summary-item">
+          <span data-i18n="zones.budgetTitle">Tu presupuesto máximo</span>
+          <b id="sum-budget">—</b>
+        </div>
+        <a class="btn btn-primary btn-xs" href="#calculadora" data-i18n="summary.cta">Ver desglose</a>
+      </div>
+    </div>
+
     <footer class="footer">
       <div class="shell footer-grid">
         <div>
@@ -692,6 +805,7 @@
           <a href="#calculadora" data-i18n="tabs.mortgage">Hipoteca</a>
           <a href="#calculadora" data-i18n="tabs.rent">Alquilar o comprar</a>
           <a href="#calculadora" data-i18n="tabs.invest">Inversión</a>
+          <a href="#zonas" data-i18n="nav.zones">Zonas y viviendas</a>
         </nav>
         <nav aria-label="Recursos">
           <p class="footer-title" data-i18n="footer.resources">Recursos</p>

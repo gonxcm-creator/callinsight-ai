@@ -3,10 +3,12 @@ import {
   REGIONS,
   REGION_BY_ID,
   SOURCES,
+  ZONES,
+  zonesFor,
   fmtDate,
   LOCALES,
 } from './data.js';
-import { amortization, computeState } from './engine.js';
+import { amortization, annuity, computeState, maxPrice, tae } from './engine.js';
 import { translate, isLocale } from './i18n.js';
 import { money, moneyCompact, number, percent, signedPercent } from './format.js';
 import { donut, wealthChart, amortBars, yieldBars } from './charts.js';
@@ -27,6 +29,7 @@ let locale = loadLocale();
 let result = computeState(state);
 let session = null;
 let activeTab = 'buy';
+let zoneSort = 'price';
 let localReports = loadReports();
 let cloudReports = [];
 let toastTimer = null;
@@ -168,13 +171,7 @@ function syncControls() {
 
 function updateHints() {
   const hint = $('#market-hint');
-  if (hint) {
-    hint.textContent = t('property.marketHint', {
-      price: number(benchmark(), locale),
-      date: fmtDate(result.region.marketDate, locale),
-      region: regionName(result.region),
-    });
-  }
+  if (hint) hint.textContent = marketHintText();
   const refInput = $('#marketRef');
   if (refInput) refInput.placeholder = number(benchmark(), locale);
   const euriborHint = $('#euribor-hint');
@@ -312,6 +309,27 @@ function bindControls() {
     });
   });
 
+  const zones = $('#zone-grid');
+  if (zones) {
+    zones.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-zone-apply]');
+      if (!button) return;
+      applyZone(button.dataset.zoneApply);
+    });
+  }
+
+  const sort = $('#zones-sort');
+  if (sort) {
+    sort.addEventListener('click', (event) => {
+      const chip = event.target.closest('[data-sort]');
+      if (!chip) return;
+      zoneSort = chip.dataset.sort;
+      $$('#zones-sort .chip').forEach((item) => item.classList.toggle('is-active', item === chip));
+      renderZones();
+      syncSortChips();
+    });
+  }
+
   const reports = $('#reports-list');
   if (reports) {
     reports.addEventListener('click', async (event) => {
@@ -356,31 +374,328 @@ function setTab(name) {
 
 function computeAndRender({ sync = true } = {}) {
   result = computeState(state);
+  const budget = maxPrice(state);
   if (sync) syncControls();
   renderKpis();
   renderBuy();
   renderMortgage();
   renderRent();
   renderInvest();
+  renderZones(budget);
+  renderDiag(budget);
+  renderSummaryBar(budget);
+  renderCompare();
+  renderHeroData();
   updateHints();
   renderDisclaimer();
   saveState();
 }
 
+/* ------------------------------------------------------------------ */
+/* Fuente de la referencia de mercado                                  */
+/* ------------------------------------------------------------------ */
+
+function marketReference() {
+  const ref = benchmark();
+  const manual =
+    state.marketRef !== null && state.marketRef !== '' && state.marketRef !== undefined;
+  if (!manual) {
+    return {
+      ref,
+      source: 'region',
+      date: result.region.marketDate,
+      place: regionName(result.region),
+    };
+  }
+  const zone = zonesFor(result.region.id).find(
+    (item) => Number(item.market) === Number(state.marketRef),
+  );
+  if (zone) return { ref, source: 'zone', date: zone.marketDate, place: zone.marketPlace };
+  return { ref, source: 'manual', date: result.region.marketDate, place: regionName(result.region) };
+}
+
+function marketHintText() {
+  const market = marketReference();
+  const price = number(market.ref, locale);
+  if (market.source === 'zone') {
+    return t('property.marketHintZone', {
+      price,
+      date: fmtDate(market.date, locale),
+      place: market.place,
+    });
+  }
+  if (market.source === 'manual') {
+    return t('property.marketHintManual', { price, region: regionName(result.region) });
+  }
+  return t('property.marketHint', {
+    price,
+    date: fmtDate(market.date, locale),
+    region: regionName(result.region),
+  });
+}
+
+function marketFootText() {
+  const market = marketReference();
+  const ref = number(result.market.benchmark, locale);
+  if (market.source === 'zone') {
+    return t('kpi.marketFootZone', { ref, date: fmtDate(market.date, locale) });
+  }
+  if (market.source === 'manual') return t('kpi.marketFootManual', { ref });
+  return t('kpi.marketFoot', { ref, date: fmtDate(market.date, locale) });
+}
+
+/* ------------------------------------------------------------------ */
+/* Zonas, presupuesto y viviendas                                      */
+/* ------------------------------------------------------------------ */
+
+const reduceMotion = () =>
+  typeof window.matchMedia === 'function' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function setMoneyKpi(el, value, unit = '') {
+  if (!el) return;
+  const to = Number(value) || 0;
+  const from = Number(el.dataset.value);
+  el.dataset.value = String(to);
+  if (el._raf) cancelAnimationFrame(el._raf);
+  if (reduceMotion() || !Number.isFinite(from) || from === 0 || from === to) {
+    el.innerHTML = `${money(to, locale)}${unit}`;
+    return;
+  }
+  const start = performance.now();
+  const tick = (now) => {
+    const p = Math.min(1, (now - start) / 420);
+    const eased = 1 - Math.pow(1 - p, 3);
+    if (p < 1) {
+      el.innerHTML = `${money(from + (to - from) * eased, locale)}${unit}`;
+      el._raf = requestAnimationFrame(tick);
+    } else {
+      el.innerHTML = `${money(to, locale)}${unit}`;
+    }
+  };
+  el._raf = requestAnimationFrame(tick);
+}
+
+function zonePayment(price) {
+  const downPct = clamp(Number(state.downPct) || 0, 0, 100);
+  const loan = Math.max(0, price * (1 - downPct / 100));
+  const years = clamp(Math.round(Number(state.years) || 30), 1, 40);
+  const rate =
+    state.mortgageType === 'variable'
+      ? Number(state.euribor || 0) + Number(state.spread || 0)
+      : Number(state.tin || 0);
+  return annuity(loan, rate, years);
+}
+
+function zoneRow(zone, budget) {
+  const real = zone.market ?? null;
+  const perM2 = real || Math.round(result.region.market * zone.index);
+  const m2 = Math.max(1, Number(state.m2) || 1);
+  const price = perM2 * m2;
+  const ratio = budget.price > 0 ? price / budget.price : 2;
+  return {
+    zone,
+    perM2,
+    real: Boolean(real),
+    price,
+    payment: zonePayment(price),
+    tone: ratio <= 0.98 ? 'good' : ratio <= 1.08 ? 'warn' : 'bad',
+    fits: budget.price > 0 ? Math.max(0, Math.floor(budget.price / perM2)) : 0,
+    ratio,
+  };
+}
+
+function renderBudget(budget = maxPrice(state)) {
+  const label = $('#budget-label');
+  if (!label) return;
+  label.textContent = t('zones.budgetLabel', {
+    income: money(state.income, locale),
+    savings: money(state.savings, locale),
+  });
+  setMoneyKpi($('#budget-value'), budget.price);
+  const foot = $('#budget-foot');
+  if (foot) {
+    const tied = budget.price > 0 && Math.abs(budget.byCash - budget.byLoan) < budget.price * 0.03;
+    foot.textContent =
+      budget.price <= 0
+        ? t('zones.budgetNone')
+        : tied
+          ? t('zones.budgetFootBoth')
+          : budget.limitedBy === 'cash'
+            ? t('zones.budgetFootCash')
+            : t('zones.budgetFootLoan');
+  }
+  const top = Math.max(budget.byCash, budget.byLoan, 1);
+  const bars = $('#budget-bars');
+  if (bars) {
+    bars.innerHTML = [
+      ['cash', t('zones.barCash'), budget.byCash],
+      ['loan', t('zones.barLoan'), budget.byLoan],
+    ]
+      .map(
+        ([kind, name, value]) => `<div class="budget-bar" data-kind="${kind}">
+          <div class="budget-bar-top"><span>${esc(name)}</span><b>${esc(
+            money(value, locale),
+          )}</b></div>
+          <div class="budget-track"><span style="width:${clamp(
+            (value / top) * 100,
+            0,
+            100,
+          ).toFixed(1)}%"></span></div>
+        </div>`,
+      )
+      .join('');
+  }
+}
+
+function renderZones(budget = maxPrice(state)) {
+  const grid = $('#zone-grid');
+  if (!grid) return;
+  const region = result.region;
+  const sub = $('#zones-sub');
+  if (sub) sub.textContent = t('zones.sub', { region: regionName(region) });
+  renderBudget(budget);
+  syncSortChips();
+
+  const zones = zonesFor(region.id);
+  const note = $('#zones-note');
+  if (!zones.length) {
+    grid.innerHTML = `<div class="empty">${esc(t('zones.empty'))}</div>`;
+    const count = $('#zones-count');
+    if (count) count.textContent = '';
+    if (note) note.textContent = '';
+    return;
+  }
+
+  const rows = zones.map((zone) => zoneRow(zone, budget));
+  const dated = rows.find((row) => row.zone.marketDate);
+  if (note) {
+    note.textContent = t('zones.note', {
+      region: regionName(region),
+      date: fmtDate(dated ? dated.zone.marketDate : region.marketDate, locale),
+    });
+  }
+  if (zoneSort === 'fit') {
+    rows.sort((a, b) => {
+      const aFits = a.ratio <= 1;
+      const bFits = b.ratio <= 1;
+      if (aFits !== bFits) return aFits ? -1 : 1;
+      return aFits ? b.ratio - a.ratio : a.ratio - b.ratio;
+    });
+  } else {
+    rows.sort((a, b) => a.price - b.price);
+  }
+
+  const count = $('#zones-count');
+  if (count) {
+    count.textContent = t('zones.count', {
+      fit: rows.filter((row) => row.ratio <= 1).length,
+      total: rows.length,
+    });
+  }
+
+  const m2 = Math.max(1, Number(state.m2) || 1);
+  const maxPerM2 = Math.max(...rows.map((row) => row.perM2));
+  grid.innerHTML = rows
+    .map((row, i) => {
+      const zone = row.zone;
+      const badge =
+        row.tone === 'good'
+          ? t('zones.badgeIn')
+          : row.tone === 'warn'
+            ? t('zones.badgeTight')
+            : t('zones.badgeOut');
+      const width = clamp((row.perM2 / maxPerM2) * 100, 4, 100);
+      return `<article class="zone" style="--i:${i}" data-zone="${esc(zone.id)}">
+        <header class="zone-head">
+          <div>
+            <h3>${esc(zone.name)}</h3>
+            <span class="zone-city">${esc(zone.city)}</span>
+          </div>
+          <span class="zone-badge" data-tone="${row.tone}">${esc(badge)}</span>
+        </header>
+        <p class="zone-price"><strong>${esc(number(row.perM2, locale))}</strong>
+          <span>${esc(t('zones.perM2'))} · ${esc(
+            row.real
+              ? `${t('zones.priceSource')} ${fmtDate(zone.marketDate, locale)}`
+              : t('zones.priceEstimated'),
+          )}</span></p>
+        <div class="zone-meter" aria-hidden="true"><span style="width:${width}%"></span></div>
+        <dl class="zone-stats">
+          <div><dt>${esc(t('zones.forM2', { m2: `${number(m2, locale)} m²` }))}</dt><dd>${esc(
+            money(row.price, locale),
+          )}</dd></div>
+          <div><dt>${esc(t('zones.paymentLabel'))}</dt><dd>${esc(
+            money(row.payment, locale),
+          )}${esc(t('common.perMonth'))}</dd></div>
+          <div><dt>${esc(t('zones.fitsLabel'))}</dt><dd>${esc(
+            `${number(row.fits, locale)} m²`,
+          )}</dd></div>
+        </dl>
+        <div class="zone-actions">
+          <button type="button" class="btn btn-outline btn-xs" data-zone-apply="${esc(
+            zone.id,
+          )}">${esc(t('zones.apply'))}</button>
+          <span class="zone-links">
+            <a class="zone-link" href="${esc(zone.fotocasa)}" target="_blank" rel="noopener noreferrer"
+              aria-label="${esc(t('zones.searchAria', { zone: zone.name, portal: 'Fotocasa' }))}">Fotocasa ↗</a>
+            <a class="zone-link" href="${esc(zone.pisos)}" target="_blank" rel="noopener noreferrer"
+              aria-label="${esc(t('zones.searchAria', { zone: zone.name, portal: 'pisos.com' }))}">pisos.com ↗</a>
+          </span>
+        </div>
+      </article>`;
+    })
+    .join('');
+
+  const portals = $('#portal-list');
+  if (portals) {
+    portals.innerHTML = [
+      ['Fotocasa', 'https://www.fotocasa.es/es/comprar/viviendas/'],
+      ['pisos.com', 'https://www.pisos.com/venta/'],
+    ]
+      .map(
+        ([name, url]) =>
+          `<li><a href="${url}" target="_blank" rel="noopener noreferrer">${name} ↗</a></li>`,
+      )
+      .join('');
+  }
+}
+
+function syncSortChips() {
+  $$('#zones-sort .chip').forEach((chip) => {
+    chip.setAttribute('aria-pressed', String(chip.dataset.sort === zoneSort));
+  });
+}
+
+function applyZone(zoneId) {
+  const zone = ZONES.find((item) => item.id === zoneId);
+  if (!zone) return;
+  state.marketRef = zone.market || Math.round(result.region.market * zone.index);
+  state.label = `${zone.name} · ${zone.city}`.slice(0, 60);
+  const labelInput = $('#label');
+  if (labelInput) labelInput.value = state.label;
+  computeAndRender();
+  const target = document.getElementById('calculadora');
+  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  toast(t('zones.appliedToast', { zone: zone.name }));
+}
+
 function renderKpis() {
-  $('#kpi-cash').textContent = money(result.cash, locale);
+  setMoneyKpi($('#kpi-cash'), result.cash);
   $('#kpi-cash-foot').textContent = t('kpi.cashFoot', {
     down: money(result.down, locale),
     closing: money(result.closing, locale),
   });
-  $('#kpi-cost').textContent = money(result.totalCost, locale);
+  setMoneyKpi($('#kpi-cost'), result.totalCost);
   $('#kpi-cost-foot').textContent = t('kpi.costFoot', {
     interest: money(result.totalInterest, locale),
     years: result.years,
   });
-  $('#kpi-payment').innerHTML = `${money(result.payment, locale)}<span class="unit">${esc(
-    t('common.perMonth'),
-  )}</span>`;
+  setMoneyKpi(
+    $('#kpi-payment'),
+    result.payment,
+    `<span class="unit">${esc(t('common.perMonth'))}</span>`,
+  );
   $('#kpi-payment-foot').textContent = t('kpi.paymentFoot', {
     type: typeLabel(),
     rate: number(result.rate, locale, 2),
@@ -391,12 +706,7 @@ function renderKpis() {
   market.textContent = result.market.benchmark > 0 ? signedPercent(diff, locale, 1) : t('common.noData');
   market.dataset.tone = diff <= -0.15 ? 'good' : diff >= 0.1 ? 'bad' : 'neutral';
   $('#kpi-market-foot').textContent =
-    result.market.benchmark > 0
-      ? t('kpi.marketFoot', {
-          ref: number(result.market.benchmark, locale),
-          date: fmtDate(result.market.date, locale),
-        })
-      : t('kpi.marketNoRef');
+    result.market.benchmark > 0 ? marketFootText() : t('kpi.marketNoRef');
 }
 
 function row(label, value, note = '') {
@@ -1295,6 +1605,266 @@ function toast(message) {
 /* Arranque                                                            */
 /* ------------------------------------------------------------------ */
 
+function renderHeroData() {
+  const box = $('#hero-data');
+  if (!box) return;
+  const chips = [
+    [t('hero.stripEuribor'), `${number(state.euribor, locale, 2)} %`],
+    [
+      t('hero.stripMarket', { region: regionName(result.region) }),
+      `${number(result.region.market, locale)} €/m²`,
+    ],
+    [t('hero.stripZones'), String(zonesFor(result.region.id).length)],
+  ];
+  box.innerHTML = chips
+    .map(
+      ([label, value]) =>
+        `<div class="hero-chip"><span>${esc(label)}</span><b>${esc(value)}</b></div>`,
+    )
+    .join('');
+}
+
+function renderSummaryBar(budget = maxPrice(state)) {
+  const cash = $('#sum-cash');
+  if (!cash) return;
+  cash.textContent = money(result.cash, locale);
+  $('#sum-payment').textContent = `${money(result.payment, locale)}${t('common.perMonth')}`;
+  $('#sum-budget').textContent = money(budget.price, locale);
+}
+
+function renderDiag(budget = maxPrice(state)) {
+  const list = $('#diag-list');
+  if (!list) return;
+  const items = [];
+  let score = 0;
+  const income = Number(state.income) || 0;
+  const debts = Number(state.otherDebts) || 0;
+  const savings = Number(state.savings) || 0;
+  const dti = income > 0 ? (result.payment + debts) / income : 0;
+
+  if (income <= 0) {
+    items.push({ tone: 'warn', text: t('diag.noIncome') });
+  } else if (dti <= 0.35) {
+    items.push({ tone: 'good', text: t('diag.dtiGood', { pct: percent(dti, locale, 0) }) });
+    score += 1;
+  } else if (dti <= 0.43) {
+    items.push({ tone: 'warn', text: t('diag.dtiWarn', { pct: percent(dti, locale, 0) }) });
+  } else {
+    items.push({ tone: 'bad', text: t('diag.dtiBad', { pct: percent(dti, locale, 0) }) });
+    score -= 1;
+  }
+
+  if (savings <= 0) {
+    items.push({ tone: 'warn', text: t('diag.cashNone') });
+  } else if (result.cash <= savings) {
+    items.push({
+      tone: 'good',
+      text: t('diag.cashOk', {
+        cash: money(result.cash, locale),
+        left: money(savings - result.cash, locale),
+      }),
+    });
+    score += 1;
+  } else {
+    items.push({
+      tone: 'bad',
+      text: t('diag.cashShort', {
+        missing: money(result.cash - savings, locale),
+        cash: money(result.cash, locale),
+      }),
+    });
+    score -= 1;
+  }
+
+  if (result.market.benchmark > 0) {
+    const diff = result.market.diffPct;
+    if (diff <= -0.05) {
+      items.push({ tone: 'good', text: t('diag.marketCheap', { pct: percent(-diff, locale, 0) }) });
+      score += 1;
+    } else if (diff >= 0.05) {
+      items.push({
+        tone: 'bad',
+        text: t('diag.marketExpensive', { pct: percent(diff, locale, 0) }),
+      });
+      score -= 1;
+    } else {
+      items.push({ tone: 'neutral', text: t('diag.marketFair') });
+    }
+  }
+
+  const zone = zonesFor(result.region.id).find(
+    (item) => Number(item.market) === Number(state.marketRef),
+  );
+  if (zone) {
+    items.push({
+      tone: 'neutral',
+      text: t('diag.zone', {
+        zone: `${zone.name} · ${zone.city}`,
+        perM2: number(zone.market, locale),
+      }),
+    });
+  }
+
+  if (budget.price > 0) {
+    if (result.price <= budget.price) {
+      items.push({
+        tone: 'good',
+        text: t('diag.budgetFits', { budget: money(budget.price, locale) }),
+      });
+      score += 1;
+    } else {
+      items.push({
+        tone: 'bad',
+        text: t('diag.budgetOver', {
+          budget: money(budget.price, locale),
+          gap: money(result.price - budget.price, locale),
+        }),
+      });
+      score -= 1;
+    }
+  }
+
+  const tone = score >= 2 ? 'good' : score >= 0 ? 'warn' : 'bad';
+  const tag = $('#diag-score');
+  if (tag) {
+    tag.className = `tag ${tone}`;
+    tag.textContent =
+      tone === 'good' ? t('diag.vGood') : tone === 'warn' ? t('diag.vWarn') : t('diag.vBad');
+  }
+  list.innerHTML = items
+    .map((item) => `<li data-tone="${item.tone}">${esc(item.text)}</li>`)
+    .join('');
+}
+
+function mortgageRows() {
+  const downPct = clamp(Number(state.downPct) || 0, 0, 100);
+  const loan = Math.max(0, result.price * (1 - downPct / 100));
+  const years = clamp(Math.round(Number(state.years) || 30), 1, 40);
+  const months = years * 12;
+  const opening = (loan * clamp(Number(state.openingFeePct) || 0, 0, 5)) / 100;
+  const fixed = Number(state.tin) || 0;
+  const variable = (Number(state.euribor) || 0) + (Number(state.spread) || 0);
+
+  const balanceAfter = (principal, annualRate, totalMonths, paidMonths) => {
+    if (principal <= 0) return 0;
+    const r = annualRate / 100 / 12;
+    if (r === 0) return principal * (1 - paidMonths / totalMonths);
+    const growth = Math.pow(1 + r, totalMonths);
+    return (principal * (growth - Math.pow(1 + r, paidMonths))) / (growth - 1);
+  };
+
+  const rows = [
+    { id: 'fixed', rate: fixed },
+    { id: 'variable', rate: variable },
+    { id: 'mixed', rate: fixed },
+  ].map((type) => {
+    const payment = annuity(loan, type.rate, years);
+    return {
+      ...type,
+      payment,
+      stress: annuity(loan, type.rate + 2, years),
+      interest: Math.max(0, payment * months - loan),
+      apr: loan > 0 ? tae(loan, payment, months, opening) : 0,
+    };
+  });
+
+  // La mixta: cuota del tramo fijo y la de después, con el Euríbor de hoy.
+  const fixedYears = clamp(Math.round(Number(state.fixedYears) || 5), 1, years - 1);
+  const fixedMonths = fixedYears * 12;
+  const p1 = annuity(loan, fixed, years);
+  const balanceAtFix = balanceAfter(loan, fixed, months, fixedMonths);
+  const p2 = annuity(balanceAtFix, variable, years - fixedYears);
+  const mixed = rows.find((row) => row.id === 'mixed');
+  mixed.payment = p1;
+  mixed.later = p2;
+  mixed.fixedYears = fixedYears;
+  mixed.interest = Math.max(
+    0,
+    p1 * fixedMonths - (loan - balanceAtFix) + p2 * (months - fixedMonths) - balanceAtFix,
+  );
+  mixed.stress = annuity(loan, variable + 2, years);
+
+  return rows;
+}
+
+function renderCompare() {
+  const table = $('#compare-table');
+  if (!table) return;
+  const rows = mortgageRows();
+  const best = rows.reduce((min, row) => (row.interest < min.interest ? row : min), rows[0]);
+  const tag = $('#compare-tag');
+  if (tag) tag.textContent = `${t('compare.best')}: ${t(`mortgage.${best.id}`)}`;
+  table.innerHTML = `
+    <thead><tr>
+      <th></th>
+      <th>${esc(t('compare.payment'))}</th>
+      <th>${esc(t('compare.stress'))}</th>
+      <th>${esc(t('compare.tae'))}</th>
+      <th>${esc(t('compare.interest'))}</th>
+    </tr></thead>
+    <tbody>${rows
+      .map(
+        (row) => `<tr${row.id === best.id ? ' class="is-best"' : ''}>
+          <td class="strong">${esc(t(`mortgage.${row.id}`))}${
+            row.id === best.id
+              ? ` <span class="tag good">${esc(t('compare.best'))}</span>`
+              : ''
+          }</td>
+          <td>${esc(money(row.payment, locale))}${
+            row.later ? ` → ${esc(money(row.later, locale))}` : ''
+          }</td>
+          <td>${esc(money(row.stress, locale))}</td>
+          <td>${esc(number(row.apr, locale, 2))} %</td>
+          <td>${esc(money(row.interest, locale))}</td>
+        </tr>`,
+      )
+      .join('')}</tbody>`;
+}
+
+function setupSummaryBar() {
+  const bar = $('#summary-bar');
+  const target = document.getElementById('calculadora');
+  if (!bar || !target) return;
+  let frame = 0;
+  let shown = false;
+  const update = () => {
+    frame = 0;
+    const rect = target.getBoundingClientRect();
+    const show = rect.top < -120;
+    if (show === shown) return;
+    shown = show;
+    bar.classList.toggle('is-visible', show);
+    bar.setAttribute('aria-hidden', String(!show));
+  };
+  const schedule = () => {
+    if (frame) return;
+    frame = requestAnimationFrame(update);
+  };
+  window.addEventListener('scroll', schedule, { passive: true });
+  window.addEventListener('resize', schedule, { passive: true });
+  schedule();
+}
+
+function setupReveal() {
+  const items = $$('.reveal');
+  if (!items.length) return;
+  if (reduceMotion() || typeof IntersectionObserver !== 'function') {
+    items.forEach((item) => item.classList.add('is-in'));
+    return;
+  }
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-in');
+        observer.unobserve(entry.target);
+      });
+    },
+    { rootMargin: '0px 0px -8% 0px', threshold: 0.06 },
+  );
+  items.forEach((item) => observer.observe(item));
+}
+
 function init() {
   applyStaticI18n();
   syncControls();
@@ -1303,6 +1873,8 @@ function init() {
   renderData();
   renderAccount();
   setTab(activeTab);
+  setupReveal();
+  setupSummaryBar();
   loadSession();
 }
 

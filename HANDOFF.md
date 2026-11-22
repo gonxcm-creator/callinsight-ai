@@ -76,8 +76,10 @@ https://cuentas-claras-w1vc2h-preview.freebuff.site
 
 ### Verificación realizada
 
-- `node --test cuentas-claras/tests/`: **16/16 pasan** (10 de motor + 6 de i18n).
-- `esbuild` del Worker: **pasa** (40,5 KB).
+- `node --test cuentas-claras/tests/`: **16/16 pasan** (10 de motor + 6 de i18n),
+  re-ejecutado el 22/11/2026 con Node 26.13.1.
+- `esbuild` del Worker: **pasa** (40,5 KB). Re-verificado el 22/11/2026 tras `npm ci`
+  en `cuentas-claras/worker/` desde su `package-lock.json` (sin modificarlo).
 - `node --check` de todos los módulos JS: pasa.
 - HTTP en el dominio real:
   - `/` 200 y assets 200 con content-type correcto.
@@ -93,7 +95,8 @@ https://cuentas-claras-w1vc2h-preview.freebuff.site
   - KPIs completos, comunidad completa, inputs legibles en claro/oscuro.
   - Cambio ES → EN → FR y vuelta a ES correcto (título, hero, región, tabs).
   - Pestañas y tablas renderizan; leyenda de amortización visible.
-  - Guardado local: diálogo, guardado y apertura verificados (la exportación JSON no se probó).
+  - Guardado local: diálogo, guardado, apertura, recarga, exportación JSON y borrado
+    verificados (ver «HECHO — Guardado local re-verificado»).
   - Preview publicado (`published: true`), producción `published: false`.
 
 ---
@@ -118,15 +121,23 @@ D1 y 401/403) sí está verificado.
 **Riesgo:** si el callback fallara, el guardado en nube no funcionaría; el guardado local
 sí funciona. No debilitar la validación de issuer/redirect para «hacerlo pasar».
 
-### EN PROGRESO — Re-verificación del guardado local tras el último refactor
+### HECHO — Guardado local re-verificado tras el refactor (22/11/2026)
 
-Se verificó el guardado local antes de cambiar `saveReport` para no duplicar el análisis
-en local y nube cuando hay sesión. Después del refactor, el test automatizado de esa
-acción se cortó por timeout de Playwright (60 s) y no se repitió. **No hay evidencia de
-fallo**, pero tampoco una verificación E2E posterior al refactor.
+Re-verificado E2E contra la preview publicada, sin sesión, después del refactor de
+`saveReport`:
 
-**Qué falta:** abrir el diálogo, guardar sin sesión, comprobar que el contador sube y que
-el análisis se abre; con sesión, comprobar que solo aparece una vez (en nube).
+- Abrir diálogo → nombre → guardar: contador `1`, 1 elemento en «En tu cuenta»,
+  `cc.reports.v1` con 1 registro, toast «Análisis guardado.».
+- La sección «En la nube» muestra solo «Entra para guardar en la nube»: **no se duplica**
+  el análisis en local y nube.
+- Recargar: el análisis sigue (contador 1, 1 elemento).
+- Abrir el guardado: restaura `label` en el campo y en `cc.state.v2`, toast «Análisis cargado.».
+- Exportar JSON: descarga `prueba-local-post-refactor.json` (antes no se había probado).
+- Borrar (confirm aceptado): contador 0, lista vacía, `cc.reports.v1` vacío.
+- Sin errores de página (`pageerror`) durante todo el recorrido.
+
+Queda pendiente solo la mitad con sesión (que el guardado vaya a nube y no a local), que
+depende del punto siguiente.
 
 ### EN PROGRESO — Build del repo raíz (`callinsight-ai`)
 
@@ -273,7 +284,11 @@ No hace falta `convex` ni `wrangler login` en este proyecto.
   el modelo no simula el Euríbor futuro.
 - **Fiscalidad del alquiler simplificada.** Tipo fijo sobre NOI menos intereses; no
   modela gastos deducibles personales ni bonificaciones.
-- **Login/callback y guardado en nube sin verificación E2E** por falta de sesión Freebuff.
+- **Login/callback y guardado en nube sin verificación E2E** por falta de sesión Freebuff:
+  el navegador del chat redirige a `freebuff.com/login`, así que el flujo se corta en el
+  proveedor. Hace falta una cuenta real; no debilitar issuer/redirect para probarlo.
+  Sí está verificado el 303 al `authorize` correcto (PKCE S256, `state`, `nonce`,
+  `redirect_uri` exacta), el 401 de `/api/reports` sin sesión y el 403 de origen ajeno.
 - **Build raíz no verificable** sin instalar dependencias (y sin lockfile raíz).
 - **Cloudflare beacon bloqueado por CSP**: error de consola esperado, sin efecto funcional.
 - **Archivos v1** (`app.js`, `config.js`, `sitemap.xml`) siguen en la carpeta, sin uso.
@@ -294,6 +309,71 @@ No hace falta `convex` ni `wrangler login` en este proyecto.
    - ¿Publicar producción?
 5. Solo si hay API/licencia de listings, añadir un buscador de viviendas concretas.
 6. Limpiar la v1 (`app.js`, `config.js`, `sitemap.xml`) o moverla a `legacy/`.
+
+## 9. Actualización v3 — Zonas, presupuesto y viviendas (22/11/2026)
+
+Se añade lo que faltaba para que un presupuesto sirva de algo: **a dónde ir con él**.
+
+- **Presupuesto máximo** (`maxPrice` en `js/engine.js`): con ingresos y ahorros calcula el
+  precio alcanzable. Dos topes: la cuota al 35 % de los ingresos netos (menos otras deudas)
+  y el ahorro, que debe cubrir entrada + impuestos + gastos + reforma + muebles. Reutiliza
+  `buyCosts`, el mismo cálculo de gastos que `computeState`, para que presupuesto y desglose
+  nunca discrepen.
+- **Nuevo campo `savings`** en `DEFAULT_STATE` (120.000 € por defecto, coherente con el
+  análisis de 420.000 € al 20 % de entrada) e input «Ahorros disponibles» en Supuestos. El
+  worker lo sanea solo: `sanitizeState` recorre `DEFAULT_STATE`.
+- **73 zonas** en `ZONES` (3–7 por comunidad; barrios y ciudades reales) con enlaces a la
+  búsqueda real de **Fotocasa** y **pisos.com** de esa zona. **146/146 enlaces comprobados
+  con HTTP 200**. Los slugs se obtuvieron de las páginas de cada municipio; idealista
+  responde 403 a IPs de datacenter, por eso no se enlaza ahí a nivel de barrio.
+- **€/m² por zona con dato real**: `js/zone-prices.js` guarda el precio medio de venta que
+  **Fotocasa publica en la página de cada zona** («En noviembre de 2026, el precio medio de
+  venta en Carabanchel, Madrid es de 3706,79 €/m²»), con su mes y su lugar exactos.
+  **73/73 zonas con dato** (rango 1.271–10.882 €/m²). Se regenera con
+  `node scripts/zone-prices.mjs`. El campo `index` queda solo como respaldo si faltara el
+  dato: la tarjeta muestra «Fotocasa nov 2026» y la nota ya no atribuye a idealista nada
+  que no sea suyo (idealista sigue siendo la fuente del €/m² autonómico).
+- **Interfaz nueva `#zonas`**: tarjeta de presupuesto con los dos límites en barras,
+  contador «N de M zonas entran», orden «más baratas / mejor encaje», y tarjetas de zona
+  con €/m² estimado, precio para tus m², cuota, m² que te caben, badge Entra/Justo/Fuera,
+  botón «Analizar esta zona» (fija `marketRef` y el nombre, recalcula y vuelve a la
+  calculadora) y enlaces a los dos portales. Checklist «Antes de firmar».
+- **Fuentes**: +5 (Fotocasa, pisos.com, INE/IPV, Colegio de Registradores, Notariado); 9 en total.
+- **Dinamismo**: reveal al hacer scroll, contador animado en los KPIs, transición de
+  pestañas, hover en tarjetas y glow suave en el hero. Todo respeta `prefers-reduced-motion`.
+- **Verificado**: 23/23 tests (3 de `maxPrice` + 4 de datos de zonas), esbuild del Worker
+  OK (52,8 KB), sin overflow horizontal a 390 px ni 1280 px, ES/EN/FR comprobados, claro y
+  oscuro revisados por captura, y la URL publicada comprobada tras el despliegue
+  (`/` 200, `/js/zone-prices.js` 200, `/api/health` `{ok:true,db:true}`, `/api/reports` 401).
+- **Limitación honesta**: no se incrustan anuncios (los portales no dan API ni licencia de
+  redistribución); cada zona abre su búsqueda real para ver casas en venta hoy. El €/m² es
+  el precio medio publicado por Fotocasa para la zona, no el precio de un anuncio concreto.
+- **Desplegado en preview** el 22/11/2026 a las 01:09 (sustituye la versión del chat
+  «Explicación De Qué Puedo Hacer», autorizado por el propietario). Producción sigue sin
+  desplegar y sin publicar.
+
+## Refinamiento v4 (22/11/2026)
+
+- **Referencia de mercado con fuente real**: al pulsar «Analizar esta zona» la pista del
+  precio y el pie del KPI dicen ya «Fotocasa nov 2026 · Carabanchel, Madrid» en vez de
+  atribuirlo a idealista. `marketReference()` en `app.js` decide la fuente: `region`
+  (idealista, media autonómica), `zone` (Fotocasa, cuando el €/m² coincide con una zona de la
+  comunidad) o `manual` (dato escrito a mano). Claves nuevas en ES/EN/FR:
+  `property.marketHintZone|Manual` y `kpi.marketFootZone|Manual`.
+- **Diagnóstico automático** (`#diag-card`): cuota sobre ingresos (DTI), efectivo del día uno
+  frente a ahorros, precio frente a la referencia, zona aplicada y encaje en el presupuesto,
+  con veredicto «Va bien / Justo / Ajustado» y color por punto.
+- **Comparador fija · variable · mixta** (`#compare-table`, pestaña Hipoteca): cuota, cuota con
+  +2 puntos, TAE e intereses totales con la misma entrada y plazo; la mixta muestra la cuota
+  del tramo fijo y la de después (`1.453 € → 1.631 €`) y se resalta la de menos intereses.
+- **Cinta de datos en el hero** (`#hero-data`): Euríbor 12M, media de la comunidad y número de
+  zonas con precio publicado.
+- **Barra de resumen fija** (`#summary-bar`): efectivo, cuota y presupuesto máximo cuando la
+  calculadora sale de pantalla; `aria-hidden` al ocultarse y fuera de la impresión.
+- **Formato**: importes y €/m² agrupan miles siempre (`1.453 €`, `5.065 €/m²`).
+- **Verificado** en la preview publicada: 23/23 tests, ES/EN revisados, sin overflow a 390 px
+  ni 1280 px, sin errores de consola salvo el beacon de Cloudflare bloqueado por CSP, y la
+  pista nombrando Fotocasa tras aplicar una zona.
 
 **Prompt sugerido para el chat nuevo:**
 
